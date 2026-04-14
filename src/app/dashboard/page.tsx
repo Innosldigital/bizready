@@ -1,41 +1,52 @@
 // src/app/dashboard/page.tsx
 // Role-based redirect — middleware sends here when role ≠ route being accessed
-import { auth } from '@clerk/nextjs/server'
+import { auth, clerkClient } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { connectDB } from '@/lib/db'
 import { User } from '@/models'
+
+function portalFor(role: string) {
+  if (role === 'platform_admin')              return '/admin/dashboard'
+  if (role === 'bank_admin' || role === 'bank_staff') return '/bank/dashboard'
+  if (role === 'sme')                         return '/sme/progress'
+  return null
+}
 
 export default async function DashboardRedirect() {
   const { userId, sessionClaims } = await auth()
   if (!userId) redirect('/sign-in')
 
-  // ── 1. Fast path: use Clerk session claims (no DB needed) ──
-  // Role is written to Clerk metadata during onboarding, so most
-  // requests resolve here without touching MongoDB.
-  const role = (sessionClaims?.metadata as { role?: string })?.role
+  // ── 1. Fast path: role already in Clerk session claims (no DB) ──
+  const claimRole = (sessionClaims?.metadata as { role?: string })?.role
+  const portal = claimRole ? portalFor(claimRole) : null
+  if (portal) redirect(portal)
 
-  if (role === 'platform_admin') redirect('/admin/dashboard')
-  if (role === 'bank_admin' || role === 'bank_staff') redirect('/bank/dashboard')
-  if (role === 'sme') redirect('/sme/progress')
-
-  // ── 2. No role in claims yet — check MongoDB (first-time login) ──
-  // If DB is unreachable, send to onboarding so the user can set up
-  // their account and get a role assigned (which will populate claims).
+  // ── 2. Role missing from claims — look up MongoDB ──────────────
+  // This handles users who existed before Clerk metadata sync was added.
+  // We find their role in MongoDB, backfill Clerk metadata so claims are
+  // populated on their next request, then redirect them immediately.
   try {
     await connectDB()
     const user = await User.findOne({ clerkId: userId }).lean() as any
 
     if (!user) redirect('/onboarding')
 
-    switch (user.role) {
-      case 'platform_admin': redirect('/admin/dashboard')
-      case 'bank_admin':
-      case 'bank_staff':     redirect('/bank/dashboard')
-      case 'sme':            redirect('/sme/progress')
-      default:               redirect('/onboarding')
+    const dest = portalFor(user.role)
+    if (!dest) redirect('/onboarding')
+
+    // Backfill Clerk metadata so this DB lookup never runs again
+    try {
+      const clerk = await clerkClient()
+      await clerk.users.updateUserMetadata(userId, {
+        publicMetadata: { role: user.role },
+      })
+    } catch {
+      // Non-fatal: metadata sync failed but we can still redirect
     }
+
+    redirect(dest)
   } catch {
-    // DB unreachable — send to onboarding which will retry the connection
+    // DB unreachable — send to onboarding to retry
     redirect('/onboarding')
   }
 }

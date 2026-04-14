@@ -32,18 +32,19 @@ export async function connectDB() {
     console.log('[connectDB] Establishing new connection to:', MONGODB_URI.split('@')[1])
     
     // Retry loop for initial connection
-    const connectWithRetry = async (retries = 3) => {
+    const connectWithRetry = async (retries = 1) => {
       try {
         return await mongoose.connect(MONGODB_URI, {
           bufferCommands: false,
           dbName: process.env.DB_NAME || 'bizready',
-          serverSelectionTimeoutMS: 15000, // 15 seconds
+          serverSelectionTimeoutMS: 8000, // 8 seconds per attempt
+          connectTimeoutMS: 8000,
           family: 4, // Force IPv4
         })
       } catch (err: any) {
         if (retries > 0) {
-          console.log(`[connectDB] Connection failed, retrying in 2s... (${retries} retries left)`)
-          await new Promise(r => setTimeout(r, 2000))
+          console.log(`[connectDB] Connection failed, retrying once...`)
+          await new Promise(r => setTimeout(r, 1000))
           return connectWithRetry(retries - 1)
         }
         throw err

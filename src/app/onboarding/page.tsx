@@ -9,8 +9,14 @@ export default function OnboardingPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    // Safety: if Clerk hasn't loaded within 10 seconds, show an error
+    const timeout = setTimeout(() => {
+      setError('Account setup is taking too long. Please check your connection and try again.')
+    }, 20000)
+
     async function onboardUser() {
       if (!isLoaded || !user) return
+      clearTimeout(timeout)
 
       try {
         const res = await fetch('/api/onboarding', {
@@ -41,6 +47,7 @@ export default function OnboardingPage() {
     }
 
     onboardUser()
+    return () => clearTimeout(timeout)
   }, [isLoaded, user, router])
 
   if (error) {
