@@ -60,12 +60,28 @@ export async function connectDB() {
     console.log('[connectDB] Connection established successfully')
     return cached
   } catch (error: any) {
-    if (error.message.includes('querySrv ECONNREFUSED')) {
-      console.error('[connectDB] SRV resolution failed. Your network may be blocking DNS SRV lookups.')
-      console.error('[connectDB] Try using a standard connection string (mongodb://) instead of (mongodb+srv://).')
+    promise = null // Reset so next request retries
+
+    if (
+      error.message?.includes('querySrv ECONNREFUSED') ||
+      error.message?.includes('querySrv ETIMEOUT') ||
+      error.message?.includes('querySrv ENOTFOUND')
+    ) {
+      console.error(
+        '[connectDB] DNS SRV lookup failed. Your network or VPN may be blocking SRV records.\n' +
+        '[connectDB] Fix: Go to MongoDB Atlas → Connect → Drivers, copy the Standard (non-SRV) connection\n' +
+        '[connectDB] string (mongodb://...) and set it as MONGODB_URI in .env.local.\n' +
+        '[connectDB] Also ensure your current IP is on the Atlas IP Access List.'
+      )
+      const friendly = new Error(
+        'Cannot reach the database. Your network is blocking MongoDB SRV DNS lookups. ' +
+        'Switch to a standard mongodb:// connection string and add your IP to the Atlas allowlist.'
+      )
+      ;(friendly as any).cause = error
+      throw friendly
     }
-    console.error('[connectDB] Connection failed stack:', error.stack)
-    promise = null // Reset promise on failure
+
+    console.error('[connectDB] Connection failed:', error.message)
     throw error
   }
 }
