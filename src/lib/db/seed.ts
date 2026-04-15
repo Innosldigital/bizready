@@ -22,6 +22,14 @@ async function seed() {
     dbName: process.env.DB_NAME || 'bizready'
   })
 
+  // Drop the old clerkOrgId_1 unique index if it exists (allows re-seeding without duplicate key errors)
+  try {
+    await Tenant.collection.dropIndex('clerkOrgId_1')
+    console.log('✓ Dropped old clerkOrgId_1 unique index')
+  } catch (err: any) {
+    if (err.code !== 27) throw err  // 27 = index not found — that's fine
+  }
+
   // ── TENANTS ────────────────────────────────────────────
   console.log('Creating tenants...')
   const tenants = [
@@ -56,7 +64,10 @@ async function seed() {
   ]
 
   for (const t of tenants) {
-    await Tenant.findOneAndUpdate({ slug: t.slug }, t, { upsert: true, new: true })
+    // Omit clerkOrgId from upsert data to prevent unique constraint issues
+    const { clerkOrgId: _omit, ...tenantData } = t
+    void _omit
+    await Tenant.findOneAndUpdate({ slug: t.slug }, tenantData, { upsert: true, new: true })
     console.log(`  ✓ Tenant: ${t.name}`)
   }
 

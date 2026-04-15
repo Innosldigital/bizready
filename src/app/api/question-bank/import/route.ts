@@ -1,6 +1,8 @@
 // src/app/api/question-bank/import/route.ts
 // Accepts CSV or XLSX upload, validates, and syncs to MongoDB
 
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/db'
 import { DiagnosticSection, Question } from '@/models'

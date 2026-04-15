@@ -11,7 +11,7 @@ export default async function SMELayout({ children }: { children: React.ReactNod
   await connectDB()
 
   const user = await User.findOne({ clerkId: userId }).lean() as any
-  if (!user || user.role !== 'sme') redirect('/sign-in')
+  if (!user || user.role !== 'sme') redirect('/dashboard')
 
   return <>{children}</>
 }

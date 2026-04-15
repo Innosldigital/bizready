@@ -1,6 +1,8 @@
 // src/app/api/diagnostic/submit/route.ts
 // Handles form submission → scoring → email → DB persistence
 
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/db'
 import { Diagnostic, Business, Tenant, DiagnosticSection, Question } from '@/models'

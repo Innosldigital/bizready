@@ -2,6 +2,8 @@
 // src/app/page.tsx — Public landing page for BizReady
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useUser } from '@clerk/nextjs'
 import { SignInButton, SignUpButton, UserButton, SignedIn, SignedOut } from '@clerk/nextjs'
 
 const PURPLE = '#5B1FA8'
@@ -159,6 +161,41 @@ const FAQS = [
   { q: 'Can we deploy under our own domain?', a: 'Yes — Growth and Enterprise plans support custom domains, so SMEs see your bank\'s domain (e.g. diagnostics.yourbank.com) rather than bizready.io.' },
 ]
 
+// ── CTA BUTTON COMPONENT ──────────────────────────────────────
+function CTAButton({ label, style }: { label: string; style: React.CSSProperties }) {
+  const { user, isLoaded } = useUser()
+  const router = useRouter()
+
+  const handleClick = () => {
+    if (isLoaded && user) {
+      // User is signed in — go to onboarding
+      router.push('/onboarding')
+    }
+    // If not loaded or no user, SignUpButton will handle it
+  }
+
+  // If user is signed in, show a redirect button
+  if (isLoaded && user) {
+    return (
+      <button
+        onClick={handleClick}
+        style={{ ...style, border: 'none', cursor: 'pointer' }}
+      >
+        {label}
+      </button>
+    )
+  }
+
+  // If not signed in, show the signup modal
+  return (
+    <SignUpButton mode="modal">
+      <button style={{ ...style, border: 'none', cursor: 'pointer' }}>
+        {label}
+      </button>
+    </SignUpButton>
+  )
+}
+
 export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null)
   const [contactForm, setContactForm] = useState({ name: '', email: '', bank: '', message: '' })
@@ -233,11 +270,10 @@ export default function LandingPage() {
             BizReady helps banks in Sierra Leone and across West Africa assess SME loan readiness in 8 minutes — producing a weighted Investment Readiness Index, personalised TA recommendations, and bank-ready reports automatically.
           </p>
           <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <SignUpButton mode="modal">
-              <button style={{ padding: '14px 32px', borderRadius: 10, background: '#fff', color: PURPLE, fontWeight: 700, fontSize: 15, border: 'none', cursor: 'pointer' }}>
-                Start free trial →
-              </button>
-            </SignUpButton>
+            <CTAButton 
+              label="Start free trial →"
+              style={{ padding: '14px 32px', borderRadius: 10, background: '#fff', color: PURPLE, fontWeight: 700, fontSize: 15 }}
+            />
             <a href="#how-it-works" style={{ padding: '14px 32px', borderRadius: 10, background: 'rgba(255,255,255,0.12)', color: '#fff', fontWeight: 600, fontSize: 15, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.3)' }}>
               See how it works
             </a>
@@ -365,17 +401,15 @@ export default function LandingPage() {
                     <span style={{ fontSize: 13, color: plan.popular ? 'rgba(255,255,255,0.6)' : '#999' }}>{plan.period}</span>
                   </div>
                   <p style={{ fontSize: 12, color: plan.popular ? 'rgba(255,255,255,0.7)' : '#777', lineHeight: 1.5, marginBottom: 20 }}>{plan.desc}</p>
-                  <SignUpButton mode="modal">
-                    <button style={{
+                  <CTAButton
+                    label={plan.cta}
+                    style={{
                       display: 'block', width: '100%', textAlign: 'center', padding: '11px', borderRadius: 9,
                       background: plan.popular ? '#fff' : PURPLE,
                       color: plan.popular ? PURPLE : '#fff',
-                      fontWeight: 700, fontSize: 13, textDecoration: 'none',
-                      border: 'none', cursor: 'pointer'
-                    }}>
-                      {plan.cta}
-                    </button>
-                  </SignUpButton>
+                      fontWeight: 700, fontSize: 13, textDecoration: 'none'
+                    }}
+                  />
                 </div>
                 <div style={{ padding: '0 28px 28px', borderTop: `0.5px solid ${plan.popular ? 'rgba(255,255,255,0.15)' : '#F3F0FF'}`, paddingTop: 18 }}>
                   {plan.features.map(f => (
@@ -459,12 +493,12 @@ export default function LandingPage() {
         <div style={{ maxWidth: 620, margin: '0 auto', textAlign: 'center' }}>
           <p style={{ fontSize: 12, fontWeight: 600, color: BLUE_DARK, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10 }}>Contact</p>
           <h2 style={{ fontSize: 34, fontWeight: 800, color: PURPLE_DARK, margin: '0 0 14px' }}>Get in touch</h2>
-          <p style={{ fontSize: 14, color: '#666', marginBottom: 36 }}>Whether you're a bank exploring a pilot, or a development finance institution looking for an enterprise deployment — we'd love to hear from you.</p>
+          <p style={{ fontSize: 14, color: '#666', marginBottom: 36 }}>{"Whether you're a bank exploring a pilot, or a development finance institution looking for an enterprise deployment — we'd love to hear from you."}</p>
           {submitted ? (
             <div style={{ background: '#E1F5EE', borderRadius: 14, padding: 32, border: '1px solid #6EE7B7' }}>
               <div style={{ fontSize: 32, marginBottom: 12 }}>✓</div>
               <p style={{ fontSize: 16, fontWeight: 600, color: '#065F46', margin: '0 0 8px' }}>Message sent!</p>
-              <p style={{ fontSize: 13, color: '#047857', margin: 0 }}>We'll get back to you within 1 business day. — Francis Stevens George, Innovation SL</p>
+              <p style={{ fontSize: 13, color: '#047857', margin: 0 }}>{"We'll get back to you within 1 business day. — Francis Stevens George, Innovation SL"}</p>
             </div>
           ) : (
             <form onSubmit={e => { e.preventDefault(); setSubmitted(true) }} style={{ display: 'flex', flexDirection: 'column', gap: 14, textAlign: 'left' }}>

@@ -1,5 +1,4 @@
 // src/app/bank/layout.tsx
-// Layout for all bank dashboard routes — resolves tenant, injects theme, renders sidebar
 
 import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
@@ -14,11 +13,12 @@ export default async function BankLayout({ children }: { children: React.ReactNo
 
   await connectDB()
 
-  const user   = await User.findOne({ clerkId: userId }).lean() as any
-  if (!user || !['bank_admin', 'bank_staff'].includes(user.role)) redirect('/sign-in')
+  const user = await User.findOne({ clerkId: userId }).lean() as any
+  if (!user) redirect('/onboarding')
+  if (!['bank_admin', 'bank_staff'].includes(user.role)) redirect('/dashboard')
 
   const tenant = await Tenant.findById(user.tenantId).lean() as any
-  if (!tenant) redirect('/sign-in')
+  if (!tenant) redirect('/onboarding')
 
   const themeCSS = generateThemeCSS(tenant.theme as any)
 
@@ -26,8 +26,8 @@ export default async function BankLayout({ children }: { children: React.ReactNo
     <>
       <style dangerouslySetInnerHTML={{ __html: themeCSS }} />
       <div className="flex min-h-screen">
-        <BankSidebar tenant={tenant as any} userRole={user.role} />
-        <main className="flex-1 min-w-0">{children}</main>
+        <BankSidebar tenant={tenant} userRole={user.role} />
+        <main className="flex-1 min-w-0 bg-gray-50">{children}</main>
       </div>
     </>
   )

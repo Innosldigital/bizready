@@ -1,5 +1,4 @@
 // src/app/admin/layout.tsx
-// Layout for all platform-admin routes — auth guard + sidebar
 
 import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
@@ -14,7 +13,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   await connectDB()
 
   const user = await User.findOne({ clerkId: userId }).lean() as any
-  if (!user || user.role !== 'platform_admin') redirect('/sign-in')
+  if (!user) redirect('/onboarding')
+  if (user.role !== 'platform_admin') redirect('/dashboard')
 
   return (
     <div className="flex min-h-screen">

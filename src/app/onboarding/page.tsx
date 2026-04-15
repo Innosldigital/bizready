@@ -1,76 +1,91 @@
-'use client'
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useUser } from '@clerk/nextjs'
+import { auth, clerkClient } from '@clerk/nextjs/server'
+import { redirect } from 'next/navigation'
+import { connectDB } from '@/lib/db'
+import { User, Tenant } from '@/models'
 
-export default function OnboardingPage() {
-  const { user, isLoaded } = useUser()
-  const router = useRouter()
-  const [error, setError] = useState<string | null>(null)
+export default async function OnboardingPage() {
+  const { userId } = await auth()
 
-  useEffect(() => {
-    // Safety: if Clerk hasn't loaded within 10 seconds, show an error
-    const timeout = setTimeout(() => {
-      setError('Account setup is taking too long. Please check your connection and try again.')
-    }, 20000)
+  if (!userId) redirect('/sign-in')
 
-    async function onboardUser() {
-      if (!isLoaded || !user) return
-      clearTimeout(timeout)
+  await connectDB()
 
-      try {
-        const res = await fetch('/api/onboarding', {
-          method: 'POST',
-        })
+  // ── Already exists in DB — check setup status then redirect ──
+  const existingUser = await User.findOne({ clerkId: userId }).lean() as any
+  if (existingUser) {
+    try {
+      const clerk = await clerkClient()
+      await clerk.users.updateUserMetadata(userId, {
+        publicMetadata: { role: existingUser.role },
+      })
+    } catch { /* non-fatal */ }
 
-        if (!res.ok) {
-          const text = await res.text()
-          throw new Error(text || 'Failed to onboard user')
-        }
+    if (existingUser.role === 'platform_admin') redirect('/admin/dashboard')
+    if (existingUser.role === 'sme')            redirect('/sme/progress')
 
-        const data = await res.json()
-        const role = data?.user?.role
-
-        // Redirect to the correct portal based on role
-        if (role === 'platform_admin') {
-          router.push('/admin/dashboard')
-        } else if (role === 'sme') {
-          router.push('/sme/progress')
-        } else {
-          // bank_admin, bank_staff, or fallback
-          router.push('/bank/dashboard')
-        }
-      } catch (err: any) {
-        console.error('Onboarding error:', err)
-        setError(err.message)
-      }
+    // bank_admin: check if they still need to complete bank setup
+    // (their tenantId still points to the default 'innosl' tenant)
+    if (existingUser.role === 'bank_admin') {
+      const tenant = await Tenant.findById(existingUser.tenantId).lean() as any
+      if (!tenant || tenant.slug === 'innosl') redirect('/onboarding/bank-setup')
     }
 
-    onboardUser()
-    return () => clearTimeout(timeout)
-  }, [isLoaded, user, router])
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-6 text-center">
-        <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4 text-2xl font-bold">!</div>
-        <h1 className="text-xl font-bold text-gray-900 mb-2">Onboarding Error</h1>
-        <p className="text-gray-600 mb-6 max-w-sm">{error}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-6 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors"
-        >
-          Try Again
-        </button>
-      </div>
-    )
+    redirect('/bank/dashboard')
   }
 
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-6 text-center">
-      <div className="w-16 h-16 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-6"></div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">Setting up your account...</h1>
-      <p className="text-gray-600">Preparing your BizReady dashboard. This will only take a moment.</p>
-    </div>
-  )
+  // ── New user — fetch from Clerk to get email ──
+  let userEmail = ''
+  let userName  = ''
+  try {
+    const clerk     = await clerkClient()
+    const clerkUser = await clerk.users.getUser(userId)
+    userEmail = clerkUser.emailAddresses[0]?.emailAddress?.toLowerCase() || ''
+    userName  = `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || userEmail
+  } catch (e) {
+    console.error('[onboarding] Could not fetch Clerk user:', e)
+    redirect('/sign-in')
+  }
+
+  // ── Determine role from PLATFORM_ADMIN_EMAILS env var ──
+  const adminEmails = (process.env.PLATFORM_ADMIN_EMAILS || '')
+    .split(',')
+    .map((e: string) => e.trim().toLowerCase())
+    .filter(Boolean)
+
+  const role = adminEmails.includes(userEmail) ? 'platform_admin' : 'bank_admin'
+
+  // ── Find default innosl tenant (temporary placeholder for bank_admin) ──
+  const defaultTenant = await Tenant.findOne({ slug: 'innosl' }).lean() as any
+  if (!defaultTenant) redirect('/onboarding/setup-required')
+
+  // ── Create user in MongoDB ──
+  try {
+    await User.create({
+      clerkId:  userId,
+      email:    userEmail,
+      name:     userName,
+      role,
+      tenantId: defaultTenant._id,
+    })
+  } catch (e: any) {
+    // Duplicate key — parallel request beat us; fetch the existing record and redirect
+    if (e.code === 11000) {
+      const existing = await User.findOne({ clerkId: userId }).lean() as any
+      if (existing?.role === 'platform_admin') redirect('/admin/dashboard')
+      redirect('/onboarding/bank-setup')
+    }
+    throw e
+  }
+
+  // ── Write role to Clerk metadata ──
+  try {
+    const clerk = await clerkClient()
+    await clerk.users.updateUserMetadata(userId, {
+      publicMetadata: { role },
+    })
+  } catch { /* non-fatal */ }
+
+  // ── Redirect: admins go straight to dashboard, bank admins complete setup ──
+  if (role === 'platform_admin') redirect('/admin/dashboard')
+  redirect('/onboarding/bank-setup')
 }
