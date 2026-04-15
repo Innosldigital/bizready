@@ -147,8 +147,8 @@ const BANKS = [
   { name: 'Access Bank Liberia',     abbr: 'ACC',  color: '#E87722' },
   { name: 'BRAC Sierra Leone',       abbr: 'BRC',  color: '#E41E26' },
   { name: 'IFC / World Bank',        abbr: 'IFC',  color: '#003F6B' },
-  { name: 'African Dev. Bank',       abbr: 'AFDB', color: '#007DC3' },
-  { name: 'Zenith Bank SL',          abbr: 'ZBK',  color: '#841D4D' },
+  { name: 'African Dev. Bank',       abbr: 'AfDB', color: '#007DC3' },
+  { name: 'Zenith Bank SL',          abbr: 'ZBSL', color: '#841D4D' },
   { name: 'InnovationSL (Owner)',    abbr: 'ISL',  color: PURPLE },
 ]
 

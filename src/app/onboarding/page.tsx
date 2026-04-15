@@ -13,6 +13,28 @@ export default async function OnboardingPage() {
   // ── Already exists in DB — check setup status then redirect ──
   const existingUser = await User.findOne({ clerkId: userId }).lean() as any
   if (existingUser) {
+    // ── Determine current intended role from PLATFORM_ADMIN_EMAILS ──
+    const adminEmails = (process.env.PLATFORM_ADMIN_EMAILS || '')
+      .split(',')
+      .map((e: string) => e.trim().toLowerCase())
+      .filter(Boolean)
+    
+    // Fetch user email from Clerk to be sure
+    let currentUserEmail = existingUser.email
+    try {
+      const clerk     = await clerkClient()
+      const clerkUser = await clerk.users.getUser(userId)
+      currentUserEmail = clerkUser.emailAddresses[0]?.emailAddress?.toLowerCase() || existingUser.email
+    } catch { /* fallback to DB email */ }
+
+    const intendedRole = adminEmails.includes(currentUserEmail) ? 'platform_admin' : existingUser.role
+
+    // If role has changed (e.g. user added to PLATFORM_ADMIN_EMAILS), update it
+    if (intendedRole !== existingUser.role) {
+      await User.updateOne({ clerkId: userId }, { role: intendedRole })
+      existingUser.role = intendedRole
+    }
+
     try {
       const clerk = await clerkClient()
       await clerk.users.updateUserMetadata(userId, {
@@ -53,6 +75,35 @@ export default async function OnboardingPage() {
     .filter(Boolean)
 
   const role = adminEmails.includes(userEmail) ? 'platform_admin' : 'bank_admin'
+
+  // ── Super Admin Check — Skip onboarding and redirect to admin dashboard ──
+  if (role === 'platform_admin') {
+    // Check if user already exists in DB to avoid double creation
+    const existing = await User.findOne({ clerkId: userId }).lean() as any
+    if (!existing) {
+      // Find default innosl tenant for the admin
+      const defaultTenant = await Tenant.findOne({ slug: 'innosl' }).lean() as any
+      if (defaultTenant) {
+        await User.create({
+          clerkId: userId,
+          email: userEmail,
+          name: userName,
+          role: 'platform_admin',
+          tenantId: defaultTenant._id,
+        })
+      }
+    }
+
+    // Update Clerk metadata
+    try {
+      const clerk = await clerkClient()
+      await clerk.users.updateUserMetadata(userId, {
+        publicMetadata: { role: 'platform_admin' },
+      })
+    } catch { /* non-fatal */ }
+
+    redirect('/admin/dashboard')
+  }
 
   // ── Find default innosl tenant (temporary placeholder for bank_admin) ──
   const defaultTenant = await Tenant.findOne({ slug: 'innosl' }).lean() as any

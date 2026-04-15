@@ -33,17 +33,22 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
   const metadata = sessionClaims?.metadata as Record<string, string> | undefined
   const role = metadata?.role || ''
 
-  if (!role && (isPlatformAdminRoute(req) || isBankRoute(req) || isSMERoute(req))) {
-    return NextResponse.redirect(new URL('/onboarding', req.url))
+  // If role is missing, let the page/layout handle the MongoDB check to avoid redirect loops due to Clerk metadata sync latency
+  if (!role) {
+    // Only redirect if they are not already going to onboarding
+    if (!isPublicRoute(req)) {
+      // We'll let them through and let the layout/page redirect them to /onboarding if needed from MongoDB
+      return NextResponse.next()
+    }
   }
 
-  if (isPlatformAdminRoute(req) && role !== 'platform_admin') {
+  if (isPlatformAdminRoute(req) && role && role !== 'platform_admin') {
     return NextResponse.redirect(new URL('/dashboard', req.url))
   }
-  if (isBankRoute(req) && !['bank_admin', 'bank_staff'].includes(role)) {
+  if (isBankRoute(req) && role && !['bank_admin', 'bank_staff'].includes(role)) {
     return NextResponse.redirect(new URL('/dashboard', req.url))
   }
-  if (isSMERoute(req) && role !== 'sme') {
+  if (isSMERoute(req) && role && role !== 'sme') {
     return NextResponse.redirect(new URL('/dashboard', req.url))
   }
 

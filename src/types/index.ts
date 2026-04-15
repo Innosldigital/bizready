@@ -70,6 +70,18 @@ export const BANK_PRESETS: Record<string, BankTheme> = {
     bankName: 'IFC / World Bank', abbreviation: 'IFC',
     tagline: 'Creating opportunity.',
   },
+  zenith: {
+    primary: '#841D4D', primaryLight: '#F7EAF1', primaryDark: '#3D0020',
+    accent: '#FFD700', fontFamily: 'Inter',
+    bankName: 'Zenith Bank SL', abbreviation: 'ZBSL',
+    tagline: 'In your best interest.',
+  },
+  afdb: {
+    primary: '#007DC3', primaryLight: '#E0F2FB', primaryDark: '#003558',
+    accent: '#F5A623', fontFamily: 'Inter',
+    bankName: 'African Development Bank', abbreviation: 'AfDB',
+    tagline: 'Building a better Africa.',
+  },
   innosl: {
     primary: '#5B1FA8', primaryLight: '#EDE9FE', primaryDark: '#3B1270',
     accent: '#0EA5E9', fontFamily: 'Inter',

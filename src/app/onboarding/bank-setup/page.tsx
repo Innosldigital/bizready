@@ -19,16 +19,18 @@ const WHITE  = '#ffffff'
 // ── Theme presets (colour-scheme cards the bank picks from) ───────────────────
 // Derived from BANK_PRESETS in types/index.ts — presented as generic palettes
 const THEME_PRESETS = [
-  { key: 'crimson',  label: 'Crimson',  primary: '#C8102E', primaryLight: '#FDE8EB', primaryDark: '#8B0000', accent: '#FFD700', fontFamily: 'Inter'   as const },
-  { key: 'scarlet',  label: 'Scarlet',  primary: '#E41E26', primaryLight: '#FDEAEA', primaryDark: '#1A0002', accent: '#F47920', fontFamily: 'Inter'   as const },
-  { key: 'amber',    label: 'Amber',    primary: '#E87722', primaryLight: '#FEF0E4', primaryDark: '#2A1000', accent: '#003366', fontFamily: 'Inter'   as const },
-  { key: 'saffron',  label: 'Saffron',  primary: '#F68B1F', primaryLight: '#FEF4E6', primaryDark: '#5A3200', accent: '#C8102E', fontFamily: 'Inter'   as const },
-  { key: 'gold',     label: 'Gold',     primary: '#DAA520', primaryLight: '#FFF8E1', primaryDark: '#5A3600', accent: '#003580', fontFamily: 'Inter'   as const },
-  { key: 'emerald',  label: 'Emerald',  primary: '#009A44', primaryLight: '#E0F5EB', primaryDark: '#003318', accent: '#0065BD', fontFamily: 'Inter'   as const },
-  { key: 'teal',     label: 'Teal',     primary: '#0D7377', primaryLight: '#E0F5F5', primaryDark: '#04292B', accent: '#F5A623', fontFamily: 'Inter'   as const },
-  { key: 'navy',     label: 'Navy',     primary: '#003F6B', primaryLight: '#E0EBF4', primaryDark: '#00152A', accent: '#F5A623', fontFamily: 'Georgia' as const },
-  { key: 'slate',    label: 'Slate',    primary: '#334155', primaryLight: '#F1F5F9', primaryDark: '#0F172A', accent: '#0EA5E9', fontFamily: 'Inter'   as const },
-  { key: 'violet',   label: 'Violet',   primary: '#5B1FA8', primaryLight: '#EDE9FE', primaryDark: '#3B1270', accent: '#0EA5E9', fontFamily: 'Inter'   as const },
+  { key: 'uba',      label: 'UBA',     primary: '#C8102E', primaryLight: '#FDE8EB', primaryDark: '#1A0005', accent: '#FFD700', fontFamily: 'Inter'   as const },
+  { key: 'slcb',     label: 'SLCB',    primary: '#C8102E', primaryLight: '#FDE8EB', primaryDark: '#8B0000', accent: '#FFD700', fontFamily: 'Inter'   as const },
+  { key: 'rokel',    label: 'Rokel',   primary: '#DAA520', primaryLight: '#FFF8E1', primaryDark: '#003580', accent: '#003580', fontFamily: 'Inter'   as const },
+  { key: 'vista',    label: 'Vista',   primary: '#C8102E', primaryLight: '#FDE8EB', primaryDark: '#8B0000', accent: '#FFFFFF', fontFamily: 'Inter'   as const },
+  { key: 'gtbank',   label: 'GTBank',  primary: '#F68B1F', primaryLight: '#FEF4E6', primaryDark: '#5A3200', accent: '#FFFFFF', fontFamily: 'Inter'   as const },
+  { key: 'ecobank',  label: 'Ecobank', primary: '#009A44', primaryLight: '#E0F5EB', primaryDark: '#003318', accent: '#0065BD', fontFamily: 'Inter'   as const },
+  { key: 'access',   label: 'Access',  primary: '#E87722', primaryLight: '#FEF0E4', primaryDark: '#2A1000', accent: '#003366', fontFamily: 'Inter'   as const },
+  { key: 'brac',     label: 'BRAC',    primary: '#E41E26', primaryLight: '#FDEAEA', primaryDark: '#1A0002', accent: '#F47920', fontFamily: 'Inter'   as const },
+  { key: 'ifc',      label: 'IFC/WB',  primary: '#003F6B', primaryLight: '#E0EBF4', primaryDark: '#00152A', accent: '#F5A623', fontFamily: 'Georgia' as const },
+  { key: 'zenith',   label: 'Zenith',  primary: '#841D4D', primaryLight: '#F7EAF1', primaryDark: '#3D0020', accent: '#FFD700', fontFamily: 'Inter'   as const },
+  { key: 'afdb',     label: 'AfDB',    primary: '#007DC3', primaryLight: '#E0F2FB', primaryDark: '#003558', accent: '#F5A623', fontFamily: 'Inter'   as const },
+  { key: 'violet',   label: 'InnoSL',  primary: '#5B1FA8', primaryLight: '#EDE9FE', primaryDark: '#3B1270', accent: '#0EA5E9', fontFamily: 'Inter'   as const },
 ] as const
 
 const FONTS = ['Inter', 'Georgia', 'Roboto', 'Lato'] as const
@@ -54,44 +56,74 @@ function Field({ label, hint, required, children }: {
 }) {
   return (
     <div style={{ marginBottom: 20 }}>
-      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: TEXT, marginBottom: 6 }}>
+      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: TEXT, marginBottom: 8 }}>
         {label}{required && <span style={{ color: '#EF4444', marginLeft: 3 }}>*</span>}
       </label>
-      {children}
-      {hint && <p style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>{hint}</p>}
+      <div style={{ position: 'relative' }}>
+        {children}
+      </div>
+      {hint && <p style={{ fontSize: 12, color: MUTED, marginTop: 6, lineHeight: 1.4 }}>{hint}</p>}
     </div>
   )
 }
 
-const inp: React.CSSProperties = {
-  width: '100%', padding: '10px 14px', borderRadius: 9,
-  border: `1.5px solid ${BORDER}`, fontSize: 14, color: TEXT,
-  background: WHITE, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
+const INP_STYLE: React.CSSProperties = {
+  width: '100%', 
+  padding: '12px 16px', 
+  borderRadius: 10,
+  border: `1.5px solid ${BORDER}`, 
+  fontSize: 14, 
+  color: TEXT,
+  background: WHITE, 
+  outline: 'none', 
+  boxSizing: 'border-box', 
+  fontFamily: 'inherit',
+  transition: 'all 0.2s ease',
 }
 
 function Steps({ current }: { current: number }) {
   const labels = ['Bank profile', 'Choose theme', 'Review & launch']
   return (
-    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 36 }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 40, maxWidth: 500, margin: '0 auto 40px' }}>
       {labels.map((s, i) => {
         const n = i + 1; const done = n < current; const active = n === current
         return (
           <div key={s} style={{ display: 'flex', alignItems: 'center', flex: i < labels.length - 1 ? 1 : 'none' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, position: 'relative' }}>
               <div style={{
-                width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+                width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
                 background: done || active ? P : BORDER,
                 color: done || active ? WHITE : MUTED,
-                border: active ? `3px solid ${PD}` : 'none',
+                border: active ? `2px solid ${WHITE}` : 'none',
+                boxShadow: active ? `0 0 0 2px ${P}` : 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 12, fontWeight: 700, boxSizing: 'border-box',
+                fontSize: 13, fontWeight: 700, boxSizing: 'border-box',
+                transition: 'all 0.3s ease',
+                zIndex: 2,
               }}>
                 {done ? '✓' : n}
               </div>
-              <span style={{ fontSize: 10, fontWeight: active ? 600 : 400, color: active ? P : MUTED, whiteSpace: 'nowrap' }}>{s}</span>
+              <span style={{ 
+                fontSize: 11, 
+                fontWeight: active ? 700 : 500, 
+                color: active ? P : MUTED, 
+                whiteSpace: 'nowrap',
+                position: 'absolute',
+                top: 40,
+                left: '50%',
+                transform: 'translateX(-50%)',
+              }}>{s}</span>
             </div>
             {i < labels.length - 1 && (
-              <div style={{ flex: 1, height: 2, background: done ? P : BORDER, margin: '0 8px', marginBottom: 18, minWidth: 20 }} />
+              <div style={{ 
+                flex: 1, 
+                height: 3, 
+                background: done ? P : BORDER, 
+                margin: '0 -10px', 
+                marginBottom: 0, 
+                minWidth: 40,
+                transition: 'all 0.3s ease',
+              }} />
             )}
           </div>
         )
@@ -253,9 +285,15 @@ export default function BankSetupPage() {
   })
 
   useEffect(() => {
+    // If user is a platform admin, they don't belong here
+    if (user?.publicMetadata?.role === 'platform_admin') {
+      router.push('/admin/dashboard')
+      return
+    }
+
     const email = user?.emailAddresses?.[0]?.emailAddress
     if (email) setForm(f => ({ ...f, contactEmail: f.contactEmail || email }))
-  }, [user])
+  }, [user, router])
 
   const set = (k: keyof FormState, v: string) => setForm(f => ({ ...f, [k]: v }))
 
@@ -294,8 +332,18 @@ export default function BankSetupPage() {
           logoUrl:      form.logoUrl,
         }),
       })
-      const data = await res.json()
-      if (!data.success) throw new Error(data.error || 'Setup failed — please try again.')
+      
+      const responseText = await res.text()
+      let data: any
+      try {
+        data = JSON.parse(responseText)
+      } catch {
+        throw new Error('Server returned an invalid response. Please try again.')
+      }
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Setup failed — please try again.')
+      }
       router.push('/bank/dashboard')
     } catch (e: any) {
       setError(e.message); setLoading(false)
@@ -327,16 +375,39 @@ export default function BankSetupPage() {
   // ── Buttons ────────────────────────────────────────────────────────────────
   const PrimaryBtn = ({ label, onClick, disabled }: { label: string; onClick: () => void; disabled?: boolean }) => (
     <button onClick={onClick} disabled={disabled} style={{
-      flex: 2, padding: '13px 0', borderRadius: 10,
-      background: disabled ? BORDER : P, color: disabled ? MUTED : WHITE,
-      fontSize: 15, fontWeight: 600, border: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
-    }}>{label}</button>
+      width: '100%', 
+      padding: '14px 24px', 
+      borderRadius: 12,
+      background: disabled ? BORDER : P, 
+      color: disabled ? MUTED : WHITE,
+      fontSize: 16, 
+      fontWeight: 600, 
+      border: 'none', 
+      cursor: disabled ? 'not-allowed' : 'pointer',
+      boxShadow: disabled ? 'none' : '0 4px 12px rgba(91,31,168,0.25)',
+      transition: 'all 0.2s ease',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+    }}>
+      {label}
+    </button>
   )
   const BackBtn = ({ onClick }: { onClick: () => void }) => (
     <button onClick={onClick} style={{
-      flex: 1, padding: '13px 0', borderRadius: 10,
-      background: WHITE, color: P, fontSize: 15, fontWeight: 600,
-      border: `1.5px solid ${P}`, cursor: 'pointer',
+      padding: '14px 24px', 
+      borderRadius: 12,
+      background: WHITE, 
+      color: P, 
+      fontSize: 16, 
+      fontWeight: 600,
+      border: `2px solid ${P}`, 
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
     }}>← Back</button>
   )
 
@@ -351,7 +422,7 @@ export default function BankSetupPage() {
       </p>
 
       <Field label="Bank / institution name" required hint="Full name shown in the portal and on all SME result emails">
-        <input style={inp} placeholder="e.g. First National Bank Sierra Leone"
+        <input style={INP_STYLE} placeholder="e.g. First National Bank Sierra Leone"
           value={form.bankName}
           onChange={e => {
             set('bankName', e.target.value)
@@ -365,32 +436,32 @@ export default function BankSetupPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <Field label="Abbreviation" required hint="2–4 chars shown in sidebar & emails">
-          <input style={inp} placeholder="e.g. FNB" maxLength={6}
+          <input style={INP_STYLE} placeholder="e.g. FNB" maxLength={6}
             value={form.abbreviation}
             onChange={e => set('abbreviation', e.target.value.toUpperCase())} />
         </Field>
         <Field label="Tagline" hint="Optional — displayed below your bank name">
-          <input style={inp} placeholder="e.g. Your bank for life"
+          <input style={INP_STYLE} placeholder="e.g. Your bank for life"
             value={form.tagline} onChange={e => set('tagline', e.target.value)} />
         </Field>
       </div>
 
       <Field label="Notification email" required hint="Receives diagnostic submission alerts and SME result copies">
-        <input type="email" style={inp} placeholder="diagnostics@yourbank.com"
+        <input type="email" style={INP_STYLE} placeholder="diagnostics@yourbank.com"
           value={form.contactEmail} onChange={e => set('contactEmail', e.target.value)} />
       </Field>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <Field label="Country">
-          <input style={inp} value={form.country} onChange={e => set('country', e.target.value)} />
+          <input style={INP_STYLE} value={form.country} onChange={e => set('country', e.target.value)} />
         </Field>
         <Field label="Region">
-          <input style={inp} value={form.region} onChange={e => set('region', e.target.value)} />
+          <input style={INP_STYLE} value={form.region} onChange={e => set('region', e.target.value)} />
         </Field>
       </div>
 
       <Field label="Logo URL" hint="Optional — direct link to a PNG or SVG (shown in sidebar and diagnostic form)">
-        <input style={inp} placeholder="https://yourbank.com/logo.png"
+        <input style={INP_STYLE} placeholder="https://yourbank.com/logo.png"
           value={form.logoUrl} onChange={e => set('logoUrl', e.target.value)} />
       </Field>
 
@@ -556,17 +627,31 @@ export default function BankSetupPage() {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 12 }}>
-        <BackBtn onClick={() => setStep(2)} />
-        <button onClick={submit} disabled={loading} style={{
-          flex: 2, padding: '13px 0', borderRadius: 10,
-          background: loading ? BORDER : P,
-          color: loading ? MUTED : WHITE,
-          fontSize: 15, fontWeight: 600, border: 'none',
-          cursor: loading ? 'not-allowed' : 'pointer',
-        }}>
-          {loading ? 'Launching portal…' : 'Launch my portal →'}
-        </button>
+      <div style={{ display: 'flex', gap: 16, marginTop: 32 }}>
+        <div style={{ flex: 1 }}>
+          <BackBtn onClick={() => setStep(2)} />
+        </div>
+        <div style={{ flex: 2 }}>
+          <button onClick={submit} disabled={loading} style={{
+            width: '100%',
+            padding: '14px 24px',
+            borderRadius: 12,
+            background: loading ? BORDER : P,
+            color: loading ? MUTED : WHITE,
+            fontSize: 16,
+            fontWeight: 600,
+            border: 'none',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            boxShadow: loading ? 'none' : '0 4px 12px rgba(91,31,168,0.25)',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+          }}>
+            {loading ? 'Launching portal…' : 'Launch my portal →'}
+          </button>
+        </div>
       </div>
 
       <p style={{ fontSize: 11, color: MUTED, textAlign: 'center', marginTop: 16 }}>

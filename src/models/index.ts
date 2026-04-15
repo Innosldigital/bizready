@@ -21,7 +21,7 @@ const TenantSchema = new Schema({
   name:                   { type: String, required: true },
   theme:                  { type: ThemeSchema, required: true },
   plan:                   { type: String, enum: ['starter','growth','enterprise','owner'], default: 'starter' },
-  clerkOrgId:             { type: String, sparse: true, unique: true },
+  clerkOrgId:             { type: String },
   stripeCustomerId:       { type: String },
   stripeSubscriptionId:   { type: String },
   country:                { type: String, default: 'Sierra Leone' },
