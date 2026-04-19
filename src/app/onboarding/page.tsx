@@ -149,6 +149,12 @@ export default async function OnboardingPage() {
       tenantId:   finalRole === 'sme' ? smeBusinessDoc.tenantId : defaultTenant._id,
       ...(finalRole === 'sme' ? { businessId: smeBusinessDoc._id } : {}),
     })
+
+    // Link the anonymous Business record to the real Clerk user so future
+    // diagnostic-page restriction checks (which query by userId) work correctly
+    if (finalRole === 'sme' && smeBusinessDoc) {
+      await Business.findByIdAndUpdate(smeBusinessDoc._id, { userId })
+    }
   } catch (e: any) {
     // Duplicate key - parallel request beat us; fetch the existing record and redirect
     if (e.code === 11000) {

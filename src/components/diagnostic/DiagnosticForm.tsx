@@ -897,10 +897,11 @@ function ResultScreen({ result, theme, bizName, bizEmail }: {
         {/* Score banner */}
         <div className="bg-white rounded-xl overflow-hidden border border-gray-100">
           <div style={{ background: theme.primary }} className="px-6 py-6 text-center">
-            <p className="text-xs text-white/70 mb-2 uppercase tracking-wide">Lendability Index - {result.period}</p>
+            <p className="text-xs text-white/70 mb-2 uppercase tracking-wide">Overall Lendability Index — {result.period}</p>
             <p className="text-6xl font-medium text-white">{idx}%</p>
             <p className="text-lg font-medium mt-2" style={{ color: bg }}>{label}</p>
-            <p className="text-xs text-white/60 mt-1">{bizName}</p>
+            <p className="text-xs text-white/50 mt-1">Weighted composite: Strategic 30% · Process 45% · Support 25%</p>
+            <p className="text-xs text-white/60 mt-2">{bizName}</p>
           </div>
           <div className="px-6 py-4 bg-gray-50 text-sm text-gray-600 text-center">
             Results and TA recommendations sent to <strong>{bizEmail}</strong>. A bank relationship manager will contact you within 3 business days.
@@ -909,13 +910,19 @@ function ResultScreen({ result, theme, bizName, bizEmail }: {
 
         {/* Capacity levels */}
         <div className="bg-white rounded-xl p-5 border border-gray-100">
-          <p className="text-sm font-medium text-gray-900 mb-4">Capacity level breakdown</p>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm font-medium text-gray-900">Capacity level sub-scores</p>
+            <p className="text-[10px] text-gray-400">Each contributes to the overall index</p>
+          </div>
           {levels.map(row => {
             const c = row.value >= 80 ? '#0F6E56' : row.value >= 60 ? '#BA7517' : '#A32D2D'
             const gap = classifyGap(row.value)
             return (
               <div key={row.label} className="flex items-center gap-3 mb-3 last:mb-0">
-                <span className="text-xs text-gray-500 w-36 flex-shrink-0">{row.label}</span>
+                <div className="w-40 flex-shrink-0">
+                  <span className="text-xs text-gray-600">{row.label}</span>
+                  <span className="ml-1.5 text-[10px] text-gray-400">({row.weight})</span>
+                </div>
                 <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
                   <div className="h-2 rounded-full transition-all duration-700"
                     style={{ width: `${row.value}%`, background: c }} />
@@ -956,14 +963,21 @@ function ResultScreen({ result, theme, bizName, bizEmail }: {
 
         {/* Projected score */}
         <div className="bg-gray-900 rounded-xl px-6 py-5 text-center">
-          <p className="text-xs text-gray-400 mb-1">Projected score after completing all TA programmes</p>
-          <p className="text-3xl font-medium text-green-400">{result.projectedScore}% - Investment Ready</p>
+          <p className="text-xs text-gray-400 mb-1">Projected index after completing all recommended TA programmes</p>
+          <p className="text-3xl font-medium text-green-400">
+            {result.projectedScore}%
+            {result.projectedScore >= 80 ? ' — Investment Ready' : ''}
+          </p>
         </div>
 
         {/* CTA */}
         <div className="bg-white rounded-xl p-5 border border-gray-100 text-center">
-          <p className="text-sm text-gray-600 mb-4">
-            Create your SME dashboard account to track your progress and monitor TA programmes.
+          <p className="text-sm font-medium text-gray-900 mb-1">Track your progress</p>
+          <p className="text-xs text-gray-500 mb-1">
+            Sign up using <strong>{bizEmail}</strong> to access your personal dashboard and monitor TA programme status.
+          </p>
+          <p className="text-[10px] text-gray-400 mb-4">
+            Use the same email address you submitted above — we will link your results automatically.
           </p>
           <a href="/sign-up"
             className="inline-block px-6 py-3 rounded-lg text-sm font-medium text-white"

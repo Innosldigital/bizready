@@ -2,7 +2,7 @@
 // Public page - SMEs access this via link from their bank
 
 import { connectDB } from '@/lib/db'
-import { Tenant, DiagnosticSection, Question, Diagnostic, Business } from '@/models'
+import { Tenant, DiagnosticSection, Question, Diagnostic, Business, User } from '@/models'
 import { notFound } from 'next/navigation'
 import { generateThemeCSS } from '@/lib/theme'
 import DiagnosticForm from '@/components/diagnostic/DiagnosticForm'
@@ -34,7 +34,11 @@ export default async function DiagnosticPage({ params }: PageProps) {
   let existingDiagnosticId: string | null = null
 
   if (userId) {
-    const business = await Business.findOne({ tenantId: tenant._id, userId }).lean() as any
+    // Prefer the User record's linked businessId (handles anonymous → signup flow)
+    const userRecord = await User.findOne({ clerkId: userId }).lean() as any
+    const business = userRecord?.businessId
+      ? await Business.findById(userRecord.businessId).lean() as any
+      : await Business.findOne({ tenantId: tenant._id, userId }).lean() as any
     if (business) {
       const lastDiag = await Diagnostic.findOne(
         { tenantId: tenant._id, businessId: business._id, status: { $in: ['submitted', 'scored', 'reported'] } },
