@@ -10,9 +10,7 @@ try {
   console.warn('[connectDB] Could not set custom DNS servers:', e)
 }
 
-const MONGODB_URI = process.env.MONGODB_URI!
-
-if (!MONGODB_URI) throw new Error('MONGODB_URI is not defined in .env.local')
+const MONGODB_URI = process.env.MONGODB_URI
 
 declare global {
   var _mongooseConn: typeof mongoose | null
@@ -23,6 +21,8 @@ let cached = global._mongooseConn
 let promise = global._mongoosePromise
 
 export async function connectDB() {
+  if (!MONGODB_URI) throw new Error('MONGODB_URI is not defined in environment variables')
+
   if (cached) {
     console.log('[connectDB] Using cached connection')
     return cached
@@ -34,7 +34,7 @@ export async function connectDB() {
     // Retry loop for initial connection
     const connectWithRetry = async (retries = 1) => {
       try {
-        return await mongoose.connect(MONGODB_URI, {
+        return await mongoose.connect(MONGODB_URI!, {
           bufferCommands: false,
           dbName: process.env.DB_NAME || 'bizready',
           serverSelectionTimeoutMS: 8000, // 8 seconds per attempt
