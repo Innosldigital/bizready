@@ -27,7 +27,7 @@ export default async function BankLayout({ children }: { children: React.ReactNo
       <style dangerouslySetInnerHTML={{ __html: themeCSS }} />
       <div className="flex min-h-screen">
         <BankSidebar tenant={tenant} userRole={user.role} />
-        <main className="flex-1 min-w-0 bg-gray-50">{children}</main>
+        <main className="flex-1 min-w-0 bg-gray-50 lg:ml-0 pt-16 lg:pt-0 pl-16 lg:pl-0">{children}</main>
       </div>
     </>
   )

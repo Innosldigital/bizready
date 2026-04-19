@@ -2,17 +2,36 @@ import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+// Hostnames that are native to this platform — anything else is a custom tenant domain
+const PLATFORM_HOSTS = new Set([
+  'bizready.io',
+  'www.bizready.io',
+  'localhost',
+  '127.0.0.1',
+])
+
+function isPlatformHost(hostname: string): boolean {
+  // Strip port and match exact + any Vercel preview deployment pattern
+  const host = hostname.split(':')[0]
+  return PLATFORM_HOSTS.has(host) || host.endsWith('.vercel.app')
+}
+
 const isPublicRoute = createRouteMatcher([
   '/',
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/onboarding(.*)',
-  '/dashboard(.*)',
   '/diagnostic/(.*)',
+  '/contact',
+  '/privacy',
+  '/terms',
+  '/security',
+  '/cookies',
   '/api/onboarding(.*)',
-  '/api/diagnostic/(.*)',
+  '/api/diagnostic/submit',
   '/api/webhook/(.*)',
-  '/api/debug/(.*)',
+  '/api/health',
+  '/status',
 ])
 
 const isPlatformAdminRoute = createRouteMatcher(['/admin(.*)'])
@@ -20,6 +39,19 @@ const isBankRoute          = createRouteMatcher(['/bank(.*)'])
 const isSMERoute           = createRouteMatcher(['/sme(.*)'])
 
 export default clerkMiddleware(async (auth, req: NextRequest) => {
+  // ── Custom domain handling ────────────────────────────────
+  // If the request is coming in on a non-platform hostname, rewrite to the
+  // /diagnostic/custom-domain handler which will look up the tenant by customDomain.
+  const hostname = req.headers.get('host') || ''
+  if (!isPlatformHost(hostname)) {
+    const url = req.nextUrl.clone()
+    url.pathname = '/diagnostic/custom-domain'
+    const res = NextResponse.rewrite(url)
+    res.headers.set('x-custom-domain', hostname.split(':')[0])
+    return res
+  }
+  // ─────────────────────────────────────────────────────────
+
   if (isPublicRoute(req)) return NextResponse.next()
 
   const { userId, sessionClaims } = await auth()

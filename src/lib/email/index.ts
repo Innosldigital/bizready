@@ -74,9 +74,9 @@ export async function sendDiagnosticResultEmail(params: {
         <td style="padding:10px 14px;font-size:12px;font-weight:500;color:#fff;text-align:center">Your score</td>
       </tr>
       ${[
-        { label: 'Strategic capacity',    w: '30%', s: result.strategic.percentage },
-        { label: 'Operational capacity',  w: '45%', s: result.operational.percentage },
-        { label: 'Support capacity',      w: '25%', s: result.support.percentage },
+        { label: 'Strategic capacity', w: '30%', s: result.strategic.percentage },
+        { label: 'Process capacity',   w: '45%', s: (result.process ?? result.operational)?.percentage ?? 0 },
+        { label: 'Support capacity',   w: '25%', s: result.support.percentage },
       ].map((row, i) => {
         const c = row.s >= 80 ? '#0F6E56' : row.s >= 60 ? '#BA7517' : '#A32D2D'
         const bg = i % 2 === 0 ? '#fff' : '#fafafa'
@@ -112,7 +112,7 @@ export async function sendDiagnosticResultEmail(params: {
   <!-- Projected score -->
   <tr><td style="background:#1A1A2E;padding:20px 32px;text-align:center">
     <p style="font-size:12px;color:rgba(255,255,255,0.6);margin:0 0 6px">Projected score after completing all TA programmes</p>
-    <p style="font-size:28px;font-weight:bold;color:#9FE1CB;margin:0">${result.projectedIndexAfterTA}% — Investment Ready</p>
+    <p style="font-size:28px;font-weight:bold;color:#9FE1CB;margin:0">${result.projectedIndexAfterTA}% - Investment Ready</p>
   </td></tr>
 
   <!-- Footer -->
@@ -130,7 +130,7 @@ export async function sendDiagnosticResultEmail(params: {
     from:    FROM,
     to:      business.email,
     reply_to: REPLY_TO,
-    subject: `Your BizReady Score: ${result.lendabilityIndex}% — ${cls} | ${theme.bankName}`,
+    subject: `Your BizReady Score: ${result.lendabilityIndex}% - ${cls} | ${theme.bankName}`,
     html,
   })
 }
@@ -159,7 +159,7 @@ export async function sendBankNotificationEmail(params: {
         <hr style="border:none;border-top:1px solid #eee;margin:16px 0">
         <p><strong>Investment readiness index:</strong> <span style="font-size:20px;font-weight:bold;color:${classificationColour(result.classification)}">${result.lendabilityIndex}%</span></p>
         <p><strong>Classification:</strong> ${classificationLabel(result.classification)}</p>
-        <p><strong>Strategic:</strong> ${result.strategic.percentage}% &nbsp;|&nbsp; <strong>Operational:</strong> ${result.operational.percentage}% &nbsp;|&nbsp; <strong>Support:</strong> ${result.support.percentage}%</p>
+        <p><strong>Strategic:</strong> ${result.strategic.percentage}% &nbsp;|&nbsp; <strong>Process:</strong> ${(result.process ?? result.operational)?.percentage ?? 0}% &nbsp;|&nbsp; <strong>Support:</strong> ${result.support.percentage}%</p>
         <p><strong>Bottleneck:</strong> ${result.bottleneck}</p>
         <p><strong>Bank recommendation:</strong> ${getBankRecommendationText(result.lendabilityIndex)}</p>
         <hr style="border:none;border-top:1px solid #eee;margin:16px 0">
@@ -190,7 +190,7 @@ export async function sendWelcomeEmail(params: {
         <div style="background:#fff;padding:28px 32px;border-radius:0 0 12px 12px">
           <p style="font-size:15px;color:#333">Dear ${business.ceoName},</p>
           <p style="font-size:14px;color:#555;line-height:1.7">Welcome to the ${theme.bankName} SME Investment Readiness Diagnostic Programme, powered by Innovation SL. You have been enrolled by your relationship manager to assess your business's readiness for a loan facility.</p>
-          <p style="font-size:14px;color:#555;line-height:1.7">Your diagnostic takes approximately 8–10 minutes to complete. Your answers will determine your <strong>Investment Readiness Index</strong> — a score that reflects your business's credit readiness — and generate a personalised Technical Assistance plan to help you grow.</p>
+          <p style="font-size:14px;color:#555;line-height:1.7">Your diagnostic takes approximately 8–10 minutes to complete. Your answers will determine your <strong>Investment Readiness Index</strong> - a score that reflects your business's credit readiness - and generate a personalised Technical Assistance plan to help you grow.</p>
           <div style="text-align:center;margin:28px 0">
             <a href="${formUrl}" style="background:${theme.primary};color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:15px;font-weight:500">Start my diagnostic →</a>
           </div>

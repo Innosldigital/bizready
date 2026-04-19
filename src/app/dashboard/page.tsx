@@ -1,5 +1,5 @@
 // src/app/dashboard/page.tsx
-// Role-based redirect hub — server component
+// Role-based redirect hub - server component
 
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
@@ -17,7 +17,7 @@ export default async function DashboardRedirect() {
   const { userId, sessionClaims } = await auth()
   if (!userId) redirect('/sign-in')
 
-  // Fast path — role already in session claims
+  // Fast path - role already in session claims
   const metadata = sessionClaims?.metadata as Record<string, string> | undefined
   const claimRole = metadata?.role
   if (claimRole) {
@@ -25,7 +25,7 @@ export default async function DashboardRedirect() {
     if (dest) redirect(dest)
   }
 
-  // Slow path — check MongoDB
+  // Slow path - check MongoDB
   try {
     await connectDB()
     const user = await User.findOne({ clerkId: userId }).lean() as any

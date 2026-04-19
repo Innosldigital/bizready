@@ -1,7 +1,7 @@
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { connectDB } from '@/lib/db'
-import { User, Tenant } from '@/models'
+import { User, Tenant, Business } from '@/models'
 
 export default async function OnboardingPage() {
   const { userId } = await auth()
@@ -10,7 +10,7 @@ export default async function OnboardingPage() {
 
   await connectDB()
 
-  // ── Already exists in DB — check setup status then redirect ──
+  // ── Already exists in DB - check setup status then redirect ──
   const existingUser = await User.findOne({ clerkId: userId }).lean() as any
   if (existingUser) {
     // ── Determine current intended role from PLATFORM_ADMIN_EMAILS ──
@@ -55,7 +55,7 @@ export default async function OnboardingPage() {
     redirect('/bank/dashboard')
   }
 
-  // ── New user — fetch from Clerk to get email ──
+  // ── New user - fetch from Clerk to get email ──
   let userEmail = ''
   let userName  = ''
   try {
@@ -74,10 +74,14 @@ export default async function OnboardingPage() {
     .map((e: string) => e.trim().toLowerCase())
     .filter(Boolean)
 
-  const role = adminEmails.includes(userEmail) ? 'platform_admin' : 'bank_admin'
+  const role = adminEmails.includes(userEmail) ? 'platform_admin' : null
 
-  // ── Super Admin Check — Skip onboarding and redirect to admin dashboard ──
-  if (role === 'platform_admin') {
+  // ── SME Check - if user has an email from a diagnostic submission ──
+  const isSME = await Business.findOne({ email: userEmail }).lean()
+  const finalRole = isSME ? 'sme' : role
+
+  // Super Admin Check - Skip onboarding and redirect to admin dashboard ──
+  if (finalRole === 'platform_admin') {
     // Check if user already exists in DB to avoid double creation
     const existing = await User.findOne({ clerkId: userId }).lean() as any
     if (!existing) {
@@ -88,7 +92,7 @@ export default async function OnboardingPage() {
           clerkId: userId,
           email: userEmail,
           name: userName,
-          role: 'platform_admin',
+          role: finalRole,
           tenantId: defaultTenant._id,
         })
       }
@@ -98,31 +102,37 @@ export default async function OnboardingPage() {
     try {
       const clerk = await clerkClient()
       await clerk.users.updateUserMetadata(userId, {
-        publicMetadata: { role: 'platform_admin' },
+        publicMetadata: { role: finalRole },
       })
     } catch { /* non-fatal */ }
 
-    redirect('/admin/dashboard')
+    if (finalRole === 'platform_admin') redirect('/admin/dashboard')
+    if (finalRole === 'sme')            redirect('/sme/progress')
   }
 
-  // ── Find default innosl tenant (temporary placeholder for bank_admin) ──
+  if (!finalRole) redirect('/onboarding/access-request')
+
+  // ── Find default innosl tenant (temporary placeholder for seeded system roles) ──
   const defaultTenant = await Tenant.findOne({ slug: 'innosl' }).lean() as any
   if (!defaultTenant) redirect('/onboarding/setup-required')
 
   // ── Create user in MongoDB ──
+  const smeBusinessDoc = isSME as any
   try {
     await User.create({
-      clerkId:  userId,
-      email:    userEmail,
-      name:     userName,
-      role,
-      tenantId: defaultTenant._id,
+      clerkId:    userId,
+      email:      userEmail,
+      name:       userName,
+      role:       finalRole,
+      tenantId:   finalRole === 'sme' ? smeBusinessDoc.tenantId : defaultTenant._id,
+      ...(finalRole === 'sme' ? { businessId: smeBusinessDoc._id } : {}),
     })
   } catch (e: any) {
-    // Duplicate key — parallel request beat us; fetch the existing record and redirect
+    // Duplicate key - parallel request beat us; fetch the existing record and redirect
     if (e.code === 11000) {
       const existing = await User.findOne({ clerkId: userId }).lean() as any
       if (existing?.role === 'platform_admin') redirect('/admin/dashboard')
+      if (existing?.role === 'sme')            redirect('/sme/progress')
       redirect('/onboarding/bank-setup')
     }
     throw e
@@ -132,11 +142,11 @@ export default async function OnboardingPage() {
   try {
     const clerk = await clerkClient()
     await clerk.users.updateUserMetadata(userId, {
-      publicMetadata: { role },
+      publicMetadata: { role: finalRole },
     })
   } catch { /* non-fatal */ }
 
   // ── Redirect: admins go straight to dashboard, bank admins complete setup ──
-  if (role === 'platform_admin') redirect('/admin/dashboard')
+  if (finalRole === 'sme') redirect('/sme/progress')
   redirect('/onboarding/bank-setup')
 }

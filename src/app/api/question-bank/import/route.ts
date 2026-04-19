@@ -4,9 +4,13 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
+import { writeAuditLog } from '@/lib/audit'
 import { connectDB } from '@/lib/db'
 import { DiagnosticSection, Question } from '@/models'
 import { auth } from '@clerk/nextjs/server'
+import { applyRateLimit, getRequestIp } from '@/lib/security/rate-limit'
+import { CAPACITY_AREAS } from '@/types'
+import * as XLSX from 'xlsx'
 
 // Expected CSV columns
 const REQUIRED_COLS = [
@@ -19,21 +23,72 @@ interface ImportRow {
   section_id: string; section_name: string; capacity_level: string
   section_weight: string; section_max_points: string; q_order: string
   question_text: string; hint?: string; question_type: string
+  area_id?: string; area_number?: string; parameter_id?: string; section_order?: string
   opt_a?: string; opt_b?: string; opt_c?: string; opt_d?: string; opt_e?: string
   score_a?: string; score_b?: string; score_c?: string; score_d?: string; score_e?: string
   is_required: string; is_active: string
 }
 
+type CapacityArea = (typeof CAPACITY_AREAS)[number]
+
+const AREA_BY_KEY = new Map<string, CapacityArea>(CAPACITY_AREAS.map((area) => [area.key, area]))
+const AREA_BY_NAME = new Map<string, CapacityArea>(CAPACITY_AREAS.map((area) => [area.name.trim().toLowerCase(), area]))
+
+function splitCSVLine(line: string): string[] {
+  const values: string[] = []
+  let current = ''
+  let inQuotes = false
+
+  for (let index = 0; index < line.length; index++) {
+    const char = line[index]
+    const next = line[index + 1]
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        current += '"'
+        index++
+      } else {
+        inQuotes = !inQuotes
+      }
+      continue
+    }
+
+    if (char === ',' && !inQuotes) {
+      values.push(current.trim())
+      current = ''
+      continue
+    }
+
+    current += char
+  }
+
+  values.push(current.trim())
+  return values
+}
+
 function parseCSV(text: string): ImportRow[] {
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
+  const lines = text.replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean)
   if (!lines.length) throw new Error('Empty file')
-  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g,''))
+  const headers = splitCSVLine(lines[0]).map(h => h.replace(/^"|"$/g,''))
   const missing = REQUIRED_COLS.filter(c => !headers.includes(c))
   if (missing.length) throw new Error(`Missing columns: ${missing.join(', ')}`)
   return lines.slice(1).map(line => {
-    const vals = line.split(',').map(v => v.trim().replace(/^"|"$/g,''))
+    const vals = splitCSVLine(line).map(v => v.replace(/^"|"$/g,''))
     return Object.fromEntries(headers.map((h, i) => [h, vals[i] || ''])) as unknown as ImportRow
   })
+}
+
+async function parseXlsx(file: File): Promise<ImportRow[]> {
+  const buffer = await file.arrayBuffer()
+  const workbook = XLSX.read(Buffer.from(buffer), { type: 'buffer' })
+  const sheetName = workbook.SheetNames[0]
+  if (!sheetName) throw new Error('Excel file contains no sheets')
+  const sheet = workbook.Sheets[sheetName]
+  const jsonRows = XLSX.utils.sheet_to_json<Record<string, string>>(sheet, { defval: '' })
+  if (!jsonRows.length) throw new Error('Empty file')
+  const missing = REQUIRED_COLS.filter(c => !(c in jsonRows[0]))
+  if (missing.length) throw new Error(`Missing columns: ${missing.join(', ')}`)
+  return jsonRows as unknown as ImportRow[]
 }
 
 function buildOptions(row: ImportRow) {
@@ -47,6 +102,35 @@ function buildOptions(row: ImportRow) {
   return opts
 }
 
+function resolveArea(row: ImportRow): CapacityArea | null {
+  return (
+    (row.area_id ? AREA_BY_KEY.get(row.area_id.trim()) : undefined) ||
+    AREA_BY_NAME.get(row.section_name.trim().toLowerCase()) ||
+    null
+  )
+}
+
+function resolveParameterId(row: ImportRow, area: CapacityArea | null): string {
+  if (row.parameter_id?.trim()) return row.parameter_id.trim()
+  if (!area) return ''
+
+  const needle = row.question_text.trim().toLowerCase()
+  return area.parameters.find((parameter) => parameter.name.trim().toLowerCase() === needle)?.id || ''
+}
+
+function resolveSectionOrder(row: ImportRow, area: CapacityArea | null): number {
+  const explicitSectionOrder = Number(row.section_order)
+  if (Number.isFinite(explicitSectionOrder) && explicitSectionOrder > 0) return explicitSectionOrder
+
+  const explicitAreaNumber = Number(row.area_number)
+  if (Number.isFinite(explicitAreaNumber) && explicitAreaNumber > 0) return explicitAreaNumber
+
+  if (area) return area.number
+
+  const parsedSectionId = parseInt(row.section_id.replace(/[^\d]/g, ''), 10)
+  return Number.isFinite(parsedSectionId) && parsedSectionId > 0 ? parsedSectionId : 99
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { userId, sessionClaims } = await auth()
@@ -54,19 +138,33 @@ export async function POST(req: NextRequest) {
     const role = (sessionClaims?.metadata as any)?.role
     if (role !== 'platform_admin') return NextResponse.json({ success: false, error: 'Platform admin only' }, { status: 403 })
 
+    const limited = applyRateLimit(req, {
+      namespace: 'question-bank-import',
+      key: userId,
+      limit: 5,
+      windowMs: 10 * 60 * 1000,
+      message: 'Too many import attempts. Please wait before uploading again.',
+    })
+    if (limited) return limited
+
     const formData = await req.formData()
     const file = formData.get('file') as File | null
     if (!file) return NextResponse.json({ success: false, error: 'No file uploaded' }, { status: 400 })
 
-    // Only accept CSV for now (XLSX support via xlsx package in a future PR)
-    if (!file.name.endsWith('.csv')) {
-      return NextResponse.json({ success: false, error: 'Only CSV files are supported. Export your Excel file as CSV first.' }, { status: 400 })
+    const isXlsx = file.name.endsWith('.xlsx') || file.name.endsWith('.xls')
+    const isCsv  = file.name.endsWith('.csv')
+    if (!isCsv && !isXlsx) {
+      return NextResponse.json({ success: false, error: 'Only CSV or Excel (.xlsx) files are supported.' }, { status: 400 })
     }
 
-    const text = await file.text()
     let rows: ImportRow[]
     try {
-      rows = parseCSV(text)
+      if (isXlsx) {
+        rows = await parseXlsx(file)
+      } else {
+        const text = await file.text()
+        rows = parseCSV(text)
+      }
     } catch (e: any) {
       return NextResponse.json({ success: false, error: `Parse error: ${e.message}` }, { status: 400 })
     }
@@ -74,6 +172,28 @@ export async function POST(req: NextRequest) {
     if (!rows.length) return NextResponse.json({ success: false, error: 'No data rows found' }, { status: 400 })
 
     await connectDB()
+
+    const mappingErrors = rows.flatMap((row, index) => {
+      const errors: string[] = []
+      const area = resolveArea(row)
+      const parameterId = resolveParameterId(row, area)
+
+      if (!area) {
+        errors.push(`Row ${index + 2}: section "${row.section_name}" does not map to a supported capacity area.`)
+      }
+      if (!parameterId) {
+        errors.push(`Row ${index + 2}: question "${row.question_text}" is missing a resolvable parameter ID.`)
+      }
+
+      return errors
+    })
+
+    if (mappingErrors.length) {
+      return NextResponse.json({
+        success: false,
+        error: `Import metadata validation failed:\n${mappingErrors.slice(0, 10).join('\n')}`,
+      }, { status: 422 })
+    }
 
     // ── VALIDATE SECTION SCORE LIMITS ─────────────────────────
     const sectionTotals: Record<string, { max: number; sum: number; name: string }> = {}
@@ -102,17 +222,22 @@ export async function POST(req: NextRequest) {
     const sectionMap: Record<string, any> = {}
     for (const [sid, meta] of Object.entries(sectionTotals)) {
       const sample = rows.find(r => r.section_id === sid)!
+      const area = resolveArea(sample)
       const weight = parseFloat(sample.section_weight?.replace('%','')) / 100 || 0
+      const areaId = sample.area_id?.trim() || area?.key || ''
+      const order = resolveSectionOrder(sample, area)
       const sec = await DiagnosticSection.findOneAndUpdate(
-        { name: meta.name },
+        areaId ? { areaId } : { name: meta.name },
         {
           name:          meta.name,
-          capacityLevel: sample.capacity_level,
+          capacityLevel: area?.level || sample.capacity_level,
           weight,
           maxPoints:     meta.max,
-          description:   `${meta.name} — imported`,
+          description:   `${meta.name} - imported`,
           isActive:      true,
-          order:         parseInt(sid.replace('S','')) || 99,
+          order,
+          areaId,
+          areaNumber:    order,
         },
         { upsert: true, new: true }
       )
@@ -125,11 +250,15 @@ export async function POST(req: NextRequest) {
       if (!row.question_text?.trim()) { skipped++; continue }
       const sectionId = sectionMap[row.section_id]
       if (!sectionId) { skipped++; continue }
+      const area = resolveArea(row)
+      const parameterId = resolveParameterId(row, area)
 
       await Question.findOneAndUpdate(
-        { sectionId, text: row.question_text.trim() },
+        parameterId ? { sectionId, parameterId } : { sectionId, text: row.question_text.trim() },
         {
           sectionId,
+          areaId:      row.area_id?.trim() || area?.key || '',
+          parameterId,
           text:       row.question_text.trim(),
           hint:       row.hint || '',
           type:       row.question_type || 'mcq',
@@ -142,6 +271,21 @@ export async function POST(req: NextRequest) {
       )
       imported++
     }
+
+    await writeAuditLog({
+      actorClerkId: userId,
+      actorRole: role,
+      action: 'question_bank.imported',
+      resourceType: 'question_bank',
+      status: 'success',
+      ipAddress: getRequestIp(req),
+      details: {
+        sectionsUpserted: Object.keys(sectionMap).length,
+        questionsImported: imported,
+        questionsSkipped: skipped,
+        fileName: file.name,
+      },
+    })
 
     return NextResponse.json({
       success: true,
@@ -159,7 +303,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ── GET — export current question bank as CSV ──────────────
+// ── GET - export current question bank as CSV ──────────────
 export async function GET(req: NextRequest) {
   const { userId, sessionClaims } = await auth()
   if (!userId) return NextResponse.json({ success: false, error: 'Unauthorised' }, { status: 401 })
@@ -172,17 +316,21 @@ export async function GET(req: NextRequest) {
 
   const sectionMap = Object.fromEntries(sections.map(s => [(s as any)._id.toString(), s]))
 
-  const headers = ['section_id','section_name','capacity_level','section_weight','section_max_points','q_order','question_text','hint','question_type','opt_a','opt_b','opt_c','opt_d','opt_e','score_a','score_b','score_c','score_d','score_e','is_required','is_active']
+  const headers = ['section_id','section_order','section_name','capacity_level','section_weight','section_max_points','area_id','area_number','parameter_id','q_order','question_text','hint','question_type','opt_a','opt_b','opt_c','opt_d','opt_e','score_a','score_b','score_c','score_d','score_e','is_required','is_active']
 
   const csvRows = questions.map((q, i) => {
     const sec = sectionMap[(q as any).sectionId?.toString()]
     const opts = (q as any).options || []
     const row: Record<string, string> = {
       section_id:          sec ? `S${String(sec.order).padStart(2,'0')}` : 'S00',
+      section_order:       String(sec?.order || 0),
       section_name:        sec?.name || '',
       capacity_level:      sec?.capacityLevel || '',
       section_weight:      sec ? `${Math.round((sec.weight||0)*100)}%` : '0%',
       section_max_points:  String(sec?.maxPoints || 0),
+      area_id:             sec?.areaId || (q as any).areaId || '',
+      area_number:         String(sec?.areaNumber || sec?.order || 0),
+      parameter_id:        (q as any).parameterId || '',
       q_order:             String((q as any).order || i+1),
       question_text:       (q as any).text || '',
       hint:                (q as any).hint || '',

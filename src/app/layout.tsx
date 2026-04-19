@@ -3,7 +3,7 @@ import { ClerkProvider } from '@clerk/nextjs'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'BizReady — SME Investment Readiness Diagnostic Platform',
+  title: 'BizReady - SME Investment Readiness Diagnostic Platform',
   description: 'Business readiness. Loan confidence. Powered by Innovation SL',
 }
 

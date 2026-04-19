@@ -17,7 +17,7 @@ const MUTED  = '#6B7280'
 const WHITE  = '#ffffff'
 
 // ── Theme presets (colour-scheme cards the bank picks from) ───────────────────
-// Derived from BANK_PRESETS in types/index.ts — presented as generic palettes
+// Derived from BANK_PRESETS in types/index.ts - presented as generic palettes
 const THEME_PRESETS = [
   { key: 'uba',      label: 'UBA',     primary: '#C8102E', primaryLight: '#FDE8EB', primaryDark: '#1A0005', accent: '#FFD700', fontFamily: 'Inter'   as const },
   { key: 'slcb',     label: 'SLCB',    primary: '#C8102E', primaryLight: '#FDE8EB', primaryDark: '#8B0000', accent: '#FFD700', fontFamily: 'Inter'   as const },
@@ -150,7 +150,7 @@ function PortalPreview({ primary, primaryLight, accent, fontFamily, bankName, ab
             {abbr.slice(0, 2)}
           </div>
           <div style={{ fontSize: 7.5, fontWeight: 600, color: WHITE, lineHeight: 1.3, fontFamily }}>{name}</div>
-          <div style={{ fontSize: 6, color: 'rgba(255,255,255,0.5)', marginTop: 1, fontFamily }}>BizReady · InnoSL</div>
+          <div style={{ fontSize: 6, color: 'rgba(255,255,255,0.5)', marginTop: 1, fontFamily }}>BizReady - InnoSL</div>
         </div>
         {/* Nav items */}
         <div style={{ padding: '8px 6px', flex: 1 }}>
@@ -246,7 +246,7 @@ function ColourRow({ label, value, onChange }: { label: string; value: string; o
       <input type="color" value={value || '#000000'} onChange={e => onChange(e.target.value)}
         style={{ width: 36, height: 32, borderRadius: 6, border: `1.5px solid ${BORDER}`, cursor: 'pointer', padding: 2 }} />
       <input
-        style={{ ...inp, flex: 1, fontFamily: 'monospace', fontSize: 13, padding: '6px 10px' }}
+        style={{ ...INP_STYLE, flex: 1, fontFamily: 'monospace', fontSize: 13, padding: '6px 10px' }}
         value={value} maxLength={7}
         onChange={e => { if (/^#[0-9a-fA-F]{0,6}$/.test(e.target.value)) onChange(e.target.value) }}
         placeholder="#000000"
@@ -342,7 +342,7 @@ export default function BankSetupPage() {
       }
 
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Setup failed — please try again.')
+        throw new Error(data.error || 'Setup failed - please try again.')
       }
       router.push('/bank/dashboard')
     } catch (e: any) {
@@ -412,7 +412,7 @@ export default function BankSetupPage() {
   )
 
   // ══════════════════════════════════════════════════════════════════════════
-  // STEP 1 — Bank profile
+  // STEP 1 - Bank profile
   // ══════════════════════════════════════════════════════════════════════════
   if (step === 1) return (
     <Shell>
@@ -435,12 +435,12 @@ export default function BankSetupPage() {
       </Field>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        <Field label="Abbreviation" required hint="2–4 chars shown in sidebar & emails">
+        <Field label="Abbreviation" required hint="2-4 chars shown in sidebar & emails">
           <input style={INP_STYLE} placeholder="e.g. FNB" maxLength={6}
             value={form.abbreviation}
             onChange={e => set('abbreviation', e.target.value.toUpperCase())} />
         </Field>
-        <Field label="Tagline" hint="Optional — displayed below your bank name">
+        <Field label="Tagline" hint="Optional - displayed below your bank name">
           <input style={INP_STYLE} placeholder="e.g. Your bank for life"
             value={form.tagline} onChange={e => set('tagline', e.target.value)} />
         </Field>
@@ -460,7 +460,7 @@ export default function BankSetupPage() {
         </Field>
       </div>
 
-      <Field label="Logo URL" hint="Optional — direct link to a PNG or SVG (shown in sidebar and diagnostic form)">
+      <Field label="Logo URL" hint="Optional - direct link to a PNG or SVG (shown in sidebar and diagnostic form)">
         <input style={INP_STYLE} placeholder="https://yourbank.com/logo.png"
           value={form.logoUrl} onChange={e => set('logoUrl', e.target.value)} />
       </Field>
@@ -470,18 +470,18 @@ export default function BankSetupPage() {
         Diagnostic URL: <strong>/diagnostic/{slugPreview(form.bankName)}</strong>
       </div>
 
-      <PrimaryBtn label="Continue to theme →" onClick={() => setStep(2)} disabled={!canAdvance} />
+      <PrimaryBtn label="Continue to theme ->" onClick={() => setStep(2)} disabled={!canAdvance} />
     </Shell>
   )
 
   // ══════════════════════════════════════════════════════════════════════════
-  // STEP 2 — Choose theme
+  // STEP 2 - Choose theme
   // ══════════════════════════════════════════════════════════════════════════
   if (step === 2) return (
     <Shell>
       <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT, margin: '0 0 6px' }}>Choose your portal theme</h1>
       <p style={{ fontSize: 14, color: MUTED, margin: '0 0 28px', lineHeight: 1.6 }}>
-        Select a colour scheme — your entire portal (sidebar, dashboard, emails, diagnostic form) will adopt these colours instantly.
+        Select a colour scheme - your entire portal (sidebar, dashboard, emails, diagnostic form) will adopt these colours instantly.
         You can change this anytime from Bank Settings.
       </p>
 
@@ -567,19 +567,19 @@ export default function BankSetupPage() {
 
       <div style={{ display: 'flex', gap: 12, marginTop: 28 }}>
         <BackBtn onClick={() => setStep(1)} />
-        <PrimaryBtn label="Review & launch →" onClick={() => setStep(3)} disabled={!canAdvance} />
+        <PrimaryBtn label="Review & launch ->" onClick={() => setStep(3)} disabled={!canAdvance} />
       </div>
     </Shell>
   )
 
   // ══════════════════════════════════════════════════════════════════════════
-  // STEP 3 — Review & launch
+  // STEP 3 - Review & launch
   // ══════════════════════════════════════════════════════════════════════════
   const preset = THEME_PRESETS.find(p => p.key === form.selectedPreset)
   const rows: Array<{ label: string; value: string; type?: 'colour' | 'colours' | 'text' }> = [
     { label: 'Bank name',       value: form.bankName },
     { label: 'Abbreviation',    value: form.abbreviation.toUpperCase() },
-    { label: 'Tagline',         value: form.tagline || '—' },
+    { label: 'Tagline',         value: form.tagline || '-' },
     { label: 'Notification email', value: form.contactEmail },
     { label: 'Country / region',value: `${form.country}, ${form.region}` },
     { label: 'Diagnostic URL',  value: `/diagnostic/${slugPreview(form.bankName)}` },
@@ -587,14 +587,14 @@ export default function BankSetupPage() {
     { label: 'Theme',           value: preset ? preset.label : 'Custom' },
     { label: 'Colours',         value: '', type: 'colours' },
     { label: 'Font',            value: form.fontFamily },
-    { label: 'Plan',            value: 'Starter — upgrade anytime from your billing page' },
+    { label: 'Plan',            value: 'Starter - upgrade anytime from your billing page' },
   ]
 
   return (
     <Shell>
       <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT, margin: '0 0 6px' }}>Ready to launch?</h1>
       <p style={{ fontSize: 14, color: MUTED, margin: '0 0 24px', lineHeight: 1.6 }}>
-        Review your setup then launch. Your portal goes live instantly — start sharing the diagnostic link with your SME clients right away.
+        Review your setup then launch. Your portal goes live instantly - start sharing the diagnostic link with your SME clients right away.
       </p>
 
       <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, overflow: 'hidden', marginBottom: 28 }}>
@@ -649,7 +649,7 @@ export default function BankSetupPage() {
             justifyContent: 'center',
             gap: 8,
           }}>
-            {loading ? 'Launching portal…' : 'Launch my portal →'}
+            {loading ? 'Launching portal...' : 'Launch my portal ->'}
           </button>
         </div>
       </div>

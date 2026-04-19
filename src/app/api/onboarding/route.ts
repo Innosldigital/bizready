@@ -2,16 +2,25 @@ export const dynamic = 'force-dynamic'
 
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
-import { connectDB } from '@/lib/db'
-import { User, Tenant } from '@/models'
+import { handleOnboarding } from '@/lib/onboarding/onboarding-handler'
+import { applyRateLimit, getRequestIp } from '@/lib/security/rate-limit'
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
     const { userId } = await auth()
 
     if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 })
     }
+
+    const limited = applyRateLimit(request, {
+      namespace: 'onboarding',
+      key: userId,
+      limit: 10,
+      windowMs: 10 * 60 * 1000,
+      message: 'Too many onboarding attempts. Please try again shortly.',
+    })
+    if (limited) return limited
 
     // Get user from Clerk directly (faster than currentUser() on first signup)
     const clerk = await clerkClient()
@@ -29,50 +38,22 @@ export async function POST() {
       return new NextResponse('User not found in Clerk', { status: 401 })
     }
 
-    await connectDB()
-
-    // Check if user already exists in MongoDB
-    const existingUser = await User.findOne({ clerkId: userId })
-    if (existingUser) {
-      try {
-        await clerk.users.updateUserMetadata(userId, {
-          publicMetadata: { role: existingUser.role },
-        })
-      } catch (metadataErr) {
-        console.warn('Clerk metadata sync skipped for existing user:', metadataErr)
-      }
-
-      return NextResponse.json({ success: true, user: existingUser })
-    }
-
-    // Find a default tenant for trial users (BizReady Platform)
-    const defaultTenant = await Tenant.findOne({ slug: 'innosl' })
-    if (!defaultTenant) {
-      return new NextResponse('Default tenant not found. Run: npm run seed', { status: 500 })
-    }
-
-    // Determine role — platform_admin if email is in PLATFORM_ADMIN_EMAILS, otherwise bank_admin
-    const platformAdminEmails = (process.env.PLATFORM_ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean)
-    const userEmail = clerkUser.emailAddresses[0].emailAddress
-    const userRole = platformAdminEmails.includes(userEmail) ? 'platform_admin' : 'bank_admin'
+    const email = clerkUser.emailAddresses[0].emailAddress
     const firstName = clerkUser.firstName || 'User'
     const lastName = clerkUser.lastName || ''
+    const ip = getRequestIp(request)
 
-    // Create new user in MongoDB with determined role
-    const newUser = await User.create({
-      clerkId: userId,
-      email: userEmail,
-      name: `${firstName} ${lastName}`.trim(),
-      role: userRole,
-      tenantId: defaultTenant._id,
-    })
+    const result = await handleOnboarding({ userId, email, firstName, lastName, ip })
 
-    // Sync role to Clerk public metadata so middleware session claims are populated
-    await clerk.users.updateUserMetadata(userId, {
-      publicMetadata: { role: newUser.role },
-    })
+    if (result.error) {
+      return new NextResponse(result.error, { status: result.status })
+    }
 
-    return NextResponse.json({ success: true, user: newUser })
+    if (result.success === false) {
+      return NextResponse.json(result, { status: result.status })
+    }
+
+    return NextResponse.json(result)
   } catch (err: any) {
     console.error('Onboarding error:', err)
     return new NextResponse(`Server error: ${err.message}`, { status: 500 })
