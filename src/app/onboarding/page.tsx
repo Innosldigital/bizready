@@ -42,7 +42,8 @@ export default async function OnboardingPage() {
       })
     } catch { /* non-fatal */ }
 
-    if (existingUser.role === 'platform_admin') redirect('/admin/dashboard')
+    if (['platform_admin','innosl_admin','focal_person','project_manager'].includes(existingUser.role)) redirect('/admin/dashboard')
+    if (existingUser.role === 'external_viewer') redirect('/ext/smes')
     if (existingUser.role === 'sme')            redirect('/sme/progress')
 
     // bank_admin: check if they still need to complete bank setup
@@ -78,7 +79,28 @@ export default async function OnboardingPage() {
 
   // ── SME Check - if user has an email from a diagnostic submission ──
   const isSME = await Business.findOne({ email: userEmail }).lean()
-  const finalRole = isSME ? 'sme' : role
+
+  // ── Pre-provisioned InnoSL staff check ──
+  // Admin may have created a pending record for this email before signup
+  const pendingStaff = !isSME && !role
+    ? await User.findOne({ email: userEmail, isPending: true }).lean() as any
+    : null
+
+  const finalRole = isSME ? 'sme' : (pendingStaff?.role ?? role)
+
+  // ── Activate pre-provisioned staff account ──
+  if (pendingStaff && finalRole) {
+    await User.updateOne(
+      { _id: pendingStaff._id },
+      { clerkId: userId, name: userName, isPending: false, isActive: true }
+    )
+    try {
+      const clerk = await clerkClient()
+      await clerk.users.updateUserMetadata(userId, { publicMetadata: { role: finalRole } })
+    } catch { /* non-fatal */ }
+    if (finalRole === 'external_viewer') redirect('/ext/smes')
+    redirect('/admin/dashboard')
+  }
 
   // Super Admin Check - Skip onboarding and redirect to admin dashboard ──
   if (finalRole === 'platform_admin') {
@@ -131,8 +153,10 @@ export default async function OnboardingPage() {
     // Duplicate key - parallel request beat us; fetch the existing record and redirect
     if (e.code === 11000) {
       const existing = await User.findOne({ clerkId: userId }).lean() as any
-      if (existing?.role === 'platform_admin') redirect('/admin/dashboard')
-      if (existing?.role === 'sme')            redirect('/sme/progress')
+      if (existing?.role === 'platform_admin' || existing?.role === 'innosl_admin' ||
+          existing?.role === 'focal_person' || existing?.role === 'project_manager') redirect('/admin/dashboard')
+      if (existing?.role === 'external_viewer') redirect('/ext/smes')
+      if (existing?.role === 'sme')             redirect('/sme/progress')
       redirect('/onboarding/bank-setup')
     }
     throw e

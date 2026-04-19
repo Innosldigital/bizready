@@ -46,12 +46,23 @@ const TenantSchema = new Schema({
 
 // ── USER ──────────────────────────────────────────────────
 const UserSchema = new Schema({
-  clerkId:    { type: String, required: true, unique: true },
-  email:      { type: String, required: true },
-  name:       { type: String, required: true },
-  role:       { type: String, enum: ['platform_admin','bank_admin','bank_staff','sme'], required: true },
-  tenantId:   { type: Schema.Types.ObjectId, ref: 'Tenant' },
-  businessId: { type: Schema.Types.ObjectId, ref: 'Business' },
+  clerkId:      { type: String, required: true, unique: true },
+  email:        { type: String, required: true },
+  name:         { type: String, required: true },
+  role:         {
+    type: String,
+    enum: [
+      'platform_admin','innosl_admin','focal_person','project_manager','external_viewer',
+      'bank_admin','bank_staff','sme',
+    ],
+    required: true,
+  },
+  tenantId:     { type: Schema.Types.ObjectId, ref: 'Tenant' },
+  businessId:   { type: Schema.Types.ObjectId, ref: 'Business' },
+  assignedSMEs: [{ type: Schema.Types.ObjectId, ref: 'Business' }],
+  jobTitle:     { type: String },
+  isActive:     { type: Boolean, default: true },
+  isPending:    { type: Boolean, default: false },
 }, { timestamps: true })
 
 // ── BUSINESS (SME) ────────────────────────────────────────

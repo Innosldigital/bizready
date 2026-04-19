@@ -5,11 +5,13 @@ import { auth, clerkClient } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { connectDB } from '@/lib/db'
 import { User } from '@/models'
+import { isInnoSLRole } from '@/lib/roles'
 
 function portalFor(role: string): string | null {
-  if (role === 'platform_admin')                      return '/admin/dashboard'
-  if (role === 'bank_admin' || role === 'bank_staff') return '/bank/dashboard'
-  if (role === 'sme')                                 return '/sme/progress'
+  if (isInnoSLRole(role) && role !== 'external_viewer') return '/admin/dashboard'
+  if (role === 'external_viewer')                        return '/ext/smes'
+  if (role === 'bank_admin' || role === 'bank_staff')    return '/bank/dashboard'
+  if (role === 'sme')                                    return '/sme/progress'
   return null
 }
 
