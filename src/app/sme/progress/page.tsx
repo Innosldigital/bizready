@@ -1,82 +1,56 @@
 // src/app/sme/progress/page.tsx
-// SME personal progress page - server component
-
 import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { connectDB } from '@/lib/db'
 import { User, Business, Diagnostic, TAProgramme, Tenant } from '@/models'
-import { BankFunnel } from '@/components/funnel/InvestmentFunnel'
-
-// ── HELPERS ───────────────────────────────────────────────
-
-function classifyGap(pct: number) {
-  if (pct >= 80) return { label: 'Ideal Performance', color: '#0F6E56', bg: '#E1F5EE' }
-  if (pct >= 50) return { label: 'Low Priority Gap',  color: '#BA7517', bg: '#FAEEDA' }
-  return           { label: 'High Priority Gap',  color: '#A32D2D', bg: '#FCEBEB' }
-}
 
 function indexColor(idx: number) {
   if (idx >= 80) return '#0F6E56'
   if (idx >= 60) return '#BA7517'
   return '#A32D2D'
 }
-
+function indexBg(idx: number) {
+  if (idx >= 80) return 'linear-gradient(135deg,#0F2D22,#0F6E56)'
+  if (idx >= 60) return 'linear-gradient(135deg,#2D1A00,#BA7517)'
+  return 'linear-gradient(135deg,#2D0A0A,#A32D2D)'
+}
 function classLabel(c: string) {
   if (c === 'investment_ready')       return 'Investment Ready'
   if (c === 'conditionally_lendable') return 'Conditionally Lendable'
   return 'High Risk'
 }
-
+function classTagBg(c: string) {
+  if (c === 'investment_ready')       return 'rgba(255,255,255,0.15)'
+  if (c === 'conditionally_lendable') return 'rgba(255,255,255,0.15)'
+  return 'rgba(255,255,255,0.15)'
+}
 function formatDate(d: any) {
-  if (!d) return '-'
-  return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  if (!d) return '—'
+  return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-function ScoreCircle({ index, size = 128 }: { index: number; size?: number }) {
-  const color = indexColor(index)
-  const r     = (size / 2) - 10
-  const circ  = 2 * Math.PI * r
-  const fill  = (index / 100) * circ
+function ScoreRing({ index, size = 160 }: { index: number; size?: number }) {
+  const color  = indexColor(index)
+  const r      = (size / 2) - 14
+  const circ   = 2 * Math.PI * r
+  const fill   = (index / 100) * circ
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#F3F4F6" strokeWidth="12" />
-      <circle
-        cx={size / 2} cy={size / 2} r={r}
-        fill="none" stroke={color} strokeWidth="12"
+      <circle cx={size/2} cy={size/2} r={r} fill="none"
+        stroke="rgba(255,255,255,0.12)" strokeWidth="10" />
+      <circle cx={size/2} cy={size/2} r={r} fill="none"
+        stroke="rgba(255,255,255,0.9)" strokeWidth="10"
         strokeDasharray={`${fill} ${circ - fill}`}
         strokeLinecap="round"
-        transform={`rotate(-90 ${size / 2} ${size / 2})`}
-      />
-      <text x={size / 2} y={size / 2 - 7} textAnchor="middle" dominantBaseline="central"
-        fontSize="26" fontWeight="800" fill={color}>{index}</text>
-      <text x={size / 2} y={size / 2 + 14} textAnchor="middle" dominantBaseline="central"
-        fontSize="10" fill="#9CA3AF">out of 100</text>
+        transform={`rotate(-90 ${size/2} ${size/2})`} />
+      <text x={size/2} y={size/2 - 10} textAnchor="middle" dominantBaseline="central"
+        fontSize="36" fontWeight="200" fill="white">{index}</text>
+      <text x={size/2} y={size/2 + 16} textAnchor="middle" dominantBaseline="central"
+        fontSize="11" fill="rgba(255,255,255,0.6)">out of 100</text>
     </svg>
   )
 }
-
-function CapacityBar({ label, pct }: { label: string; pct: number }) {
-  const gap = classifyGap(pct)
-  return (
-    <div className="mb-4">
-      <div className="flex justify-between text-sm mb-1.5">
-        <span className="font-medium text-gray-700">{label}</span>
-        <div className="flex items-center gap-2">
-          <span className="font-semibold" style={{ color: gap.color }}>{pct}%</span>
-          <span className="text-[10px] px-2 py-0.5 rounded-full font-medium"
-            style={{ background: gap.bg, color: gap.color }}>{gap.label}</span>
-        </div>
-      </div>
-      <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-        <div className="h-2.5 rounded-full transition-all duration-500"
-          style={{ width: `${pct}%`, background: gap.color }} />
-      </div>
-    </div>
-  )
-}
-
-// ── PAGE ──────────────────────────────────────────────────
 
 export default async function SMEProgressPage() {
   const { userId } = await auth()
@@ -93,17 +67,16 @@ export default async function SMEProgressPage() {
 
   if (!business) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 max-w-md text-center">
-          <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-5 text-3xl">
-            📋
-          </div>
-          <h1 className="text-lg font-bold text-gray-900 mb-2">No Business Profile Found</h1>
-          <p className="text-sm text-gray-500 mb-6">
-            Complete your business profile to get started with your diagnostic assessment.
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center max-w-sm">
+          <div className="w-20 h-20 rounded-3xl bg-white shadow-lg flex items-center justify-center mx-auto mb-6 text-4xl">📋</div>
+          <h1 className="text-xl font-semibold text-gray-900 mb-2">No Business Profile</h1>
+          <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+            Complete your business profile to unlock your investment readiness assessment.
           </p>
           <Link href="/onboarding"
-            className="inline-block px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-emerald-700 hover:bg-emerald-800 transition-colors">
+            className="inline-block px-6 py-3 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ background: 'linear-gradient(135deg,#5B1FA8,#185FA5)' }}>
             Complete Profile
           </Link>
         </div>
@@ -112,28 +85,23 @@ export default async function SMEProgressPage() {
   }
 
   const diagnostics = await Diagnostic.find({ businessId: business._id })
-    .sort({ createdAt: -1 })
-    .lean() as any[]
-
-  // Fetch tenant for diagnostic URL slug
+    .sort({ createdAt: -1 }).lean() as any[]
   const tenant = await Tenant.findById(business.tenantId).lean() as any
 
-  // No diagnostics empty state
   if (diagnostics.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 max-w-md text-center">
-          <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-5 text-3xl">
-            🎯
-          </div>
-          <h1 className="text-lg font-bold text-gray-900 mb-2">No Diagnostics Yet</h1>
-          <p className="text-sm text-gray-500 mb-6">
-            Take your first business diagnostic to understand your investment readiness and get personalised recommendations.
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center max-w-sm">
+          <div className="w-20 h-20 rounded-3xl bg-emerald-50 flex items-center justify-center mx-auto mb-6 text-4xl">🎯</div>
+          <h1 className="text-xl font-semibold text-gray-900 mb-2">No Assessments Yet</h1>
+          <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+            Take your first diagnostic to receive your Investment Readiness Index and personalised TA recommendations.
           </p>
           {tenant?.slug && (
             <Link href={`/diagnostic/${tenant.slug}`}
-              className="inline-block px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-emerald-700 hover:bg-emerald-800 transition-colors">
-              Take Your First Diagnostic
+              className="inline-block px-6 py-3 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              style={{ background: 'linear-gradient(135deg,#0F6E56,#185FA5)' }}>
+              Start Diagnostic
             </Link>
           )}
         </div>
@@ -141,120 +109,132 @@ export default async function SMEProgressPage() {
     )
   }
 
-  const latest  = diagnostics[0]
-  const result  = latest?.result ?? null
-  const idx     = result?.lendabilityIndex ?? 0
-  const cls     = result?.classification   ?? 'high_risk'
-  const strat   = result?.strategic?.percentage ?? 0
-  const proc    = (result?.process ?? result?.operational)?.percentage ?? 0
-  const supp    = result?.support?.percentage ?? 0
+  const latest = diagnostics[0]
+  const result = latest?.result ?? null
+  const idx    = result?.lendabilityIndex ?? 0
+  const cls    = result?.classification   ?? 'high_risk'
+  const strat  = result?.strategic?.percentage ?? 0
+  const proc   = (result?.process ?? result?.operational)?.percentage ?? 0
+  const supp   = result?.support?.percentage ?? 0
 
   const taPrograms = await TAProgramme.find({ businessId: business._id })
-    .sort({ createdAt: -1 })
-    .lean() as any[]
+    .sort({ createdAt: -1 }).lean() as any[]
+  const activeTAs    = taPrograms.filter((t: any) => t.status === 'active')
+  const completedTAs = taPrograms.filter((t: any) => t.status === 'completed')
 
-  // ── Next Step CTA ──
-  let ctaTitle   = ''
-  let ctaBody    = ''
-  let ctaBg      = ''
-  let ctaBorder  = ''
-  let ctaColor   = ''
-
-  if (cls === 'high_risk') {
-    ctaTitle  = 'Development Programme Required'
-    ctaBody   = 'Your bank will contact you to start a development programme designed to address your key capacity gaps. This is the first step towards becoming investment ready.'
-    ctaBg     = '#FCEBEB'; ctaBorder = '#FECACA'; ctaColor = '#A32D2D'
-  } else if (cls === 'conditionally_lendable') {
-    ctaTitle  = 'Complete Your TA Programme'
-    ctaBody   = 'Complete your Technical Assistance programme to reach Investment Ready status. Addressing your identified gaps will improve your lendability index and unlock access to finance.'
-    ctaBg     = '#FAEEDA'; ctaBorder = '#FDE68A'; ctaColor = '#BA7517'
-  } else {
-    ctaTitle  = 'You Are Eligible for a Loan'
-    ctaBody   = 'Congratulations - you are eligible to apply for a loan. Contact your bank today to proceed with a credit appraisal. Your investment readiness score demonstrates strong business capacity.'
-    ctaBg     = '#E1F5EE'; ctaBorder = '#A7F3D0'; ctaColor = '#0F6E56'
+  const ctaConfig = {
+    high_risk:              { title: 'Development Programme Required', body: 'Your bank will design a structured development programme to address critical capacity gaps. This is your first step toward investment readiness.', accent: '#A32D2D' },
+    conditionally_lendable: { title: 'Complete Your TA Programme',     body: 'You\'re close. Completing your Technical Assistance programme will push your index above 80 and unlock access to finance.',            accent: '#BA7517' },
+    investment_ready:       { title: 'You Are Eligible for a Loan',    body: 'Congratulations — your business has reached Investment Ready status. Contact your bank today to begin the credit appraisal process.',  accent: '#0F6E56' },
   }
+  const cta = ctaConfig[cls as keyof typeof ctaConfig] ?? ctaConfig.high_risk
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
+    <div className="space-y-5">
 
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">My Business Progress</h1>
-        <p className="text-sm text-gray-500 mt-1">{business.name}</p>
+      {/* ── HERO SCORE CARD ─────────────────────────────── */}
+      <div className="rounded-3xl overflow-hidden shadow-xl" style={{ background: indexBg(idx) }}>
+        <div className="px-8 pt-8 pb-6">
+          {/* Top row */}
+          <div className="flex items-start justify-between mb-8">
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-widest text-white/50 mb-1">
+                Investment Readiness
+              </p>
+              <h1 className="text-2xl font-semibold text-white leading-tight">{business.name}</h1>
+              <p className="text-sm text-white/50 mt-0.5">Last assessed {formatDate(latest.createdAt)} · {latest.period}</p>
+            </div>
+            <span className="px-3 py-1.5 rounded-full text-xs font-semibold text-white"
+              style={{ background: classTagBg(cls), border: '1px solid rgba(255,255,255,0.2)' }}>
+              {classLabel(cls)}
+            </span>
+          </div>
+
+          {/* Score + sub-scores */}
+          <div className="flex items-center gap-8">
+            <ScoreRing index={idx} size={160} />
+            <div className="flex-1 space-y-4">
+              {[
+                { label: 'Strategic', value: strat, weight: '30%' },
+                { label: 'Process',   value: proc,  weight: '45%' },
+                { label: 'Support',   value: supp,  weight: '25%' },
+              ].map(row => (
+                <div key={row.label}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-medium text-white/70">{row.label}
+                      <span className="text-white/35 ml-1">({row.weight})</span>
+                    </span>
+                    <span className="text-sm font-semibold text-white">{row.value}%</span>
+                  </div>
+                  <div className="h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.12)' }}>
+                    <div className="h-1.5 rounded-full transition-all duration-700"
+                      style={{ width: `${row.value}%`, background: 'rgba(255,255,255,0.75)' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Stats strip */}
+        <div className="grid grid-cols-3 divide-x border-t" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+          {[
+            { label: 'Assessments', value: diagnostics.length },
+            { label: 'Active TAs',  value: activeTAs.length },
+            { label: 'Completed',   value: completedTAs.length },
+          ].map(s => (
+            <div key={s.label} className="px-6 py-4 text-center" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+              <p className="text-xl font-semibold text-white">{s.value}</p>
+              <p className="text-[11px] text-white/45 mt-0.5">{s.label}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* ── 1. Hero Score ── */}
-      {result && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex items-center gap-6">
-          <ScoreCircle index={idx} />
-          <div>
-            <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">Lendability Index</p>
-            <p className="text-lg font-bold mb-1" style={{ color: indexColor(idx) }}>{classLabel(cls)}</p>
-            <p className="text-xs text-gray-400">Latest assessment: {formatDate(latest.createdAt)}</p>
-            <p className="text-xs text-gray-400 mt-0.5">Period: {latest.period}</p>
-          </div>
-        </div>
-      )}
-
-      {/* ── 2. Capacity Levels ── */}
-      {result && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <h2 className="text-sm font-semibold text-gray-700 mb-4">Capacity Levels</h2>
-          <CapacityBar label="Strategic Capacity" pct={strat} />
-          <CapacityBar label="Process / Operational Capacity" pct={proc} />
-          <CapacityBar label="Support Capacity" pct={supp} />
-        </div>
-      )}
-
-      {/* ── 3. 12-Area Breakdown (accordion) ── */}
+      {/* ── 12-AREA BREAKDOWN ───────────────────────────── */}
       {result?.areaScores?.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-50">
-            <h2 className="text-sm font-semibold text-gray-700">12-Area Breakdown</h2>
+        <div className="bg-white rounded-3xl shadow-sm overflow-hidden">
+          <div className="px-6 py-5 border-b border-gray-100">
+            <h2 className="text-[15px] font-semibold text-gray-900">12-Area Breakdown</h2>
+            <p className="text-[13px] text-gray-400 mt-0.5">Capacity scores across all assessment areas</p>
           </div>
           <div className="divide-y divide-gray-50">
-            {result.areaScores
-              .slice()
+            {[...result.areaScores]
               .sort((a: any, b: any) => a.areaNumber - b.areaNumber)
               .map((area: any) => {
-                const gap = classifyGap(area.percentage)
+                const c = area.percentage >= 80 ? '#0F6E56' : area.percentage >= 50 ? '#BA7517' : '#A32D2D'
+                const bg = area.percentage >= 80 ? '#E1F5EE' : area.percentage >= 50 ? '#FAEEDA' : '#FCEBEB'
                 return (
                   <details key={area.areaKey} className="group">
-                    <summary className="px-6 py-3.5 flex items-center justify-between cursor-pointer list-none hover:bg-gray-50 transition-colors">
+                    <summary className="flex items-center gap-4 px-6 py-4 cursor-pointer list-none hover:bg-gray-50 transition-colors">
+                      <span className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold flex-shrink-0"
+                        style={{ background: bg, color: c }}>
+                        {area.areaNumber}
+                      </span>
+                      <span className="flex-1 text-[13px] font-medium text-gray-800">{area.areaName}</span>
                       <div className="flex items-center gap-3">
-                        <span className="w-6 h-6 rounded-full bg-gray-100 text-[10px] font-semibold text-gray-500 flex items-center justify-center flex-shrink-0">
-                          {area.areaNumber}
-                        </span>
-                        <span className="text-sm font-medium text-gray-700">{area.areaName}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                          style={{ background: gap.bg, color: gap.color }}>{gap.label}</span>
-                        <span className="text-sm font-bold" style={{ color: gap.color }}>{area.percentage}%</span>
-                        <svg className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="w-24 h-1.5 rounded-full bg-gray-100 overflow-hidden hidden sm:block">
+                          <div className="h-1.5 rounded-full" style={{ width: `${area.percentage}%`, background: c }} />
+                        </div>
+                        <span className="text-sm font-semibold w-12 text-right" style={{ color: c }}>{area.percentage}%</span>
+                        <svg className="w-4 h-4 text-gray-300 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
                       </div>
                     </summary>
-                    <div className="px-6 pb-4 pt-2 bg-gray-50">
-                      <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
-                        <span>Score: <strong className="text-gray-700">{area.rawScore} / {area.maxScore}</strong></span>
-                        <span>Level: <strong className="text-gray-700 capitalize">{area.level}</strong></span>
+                    {area.parameterScores?.length > 0 && (
+                      <div className="px-6 pb-4 pt-1 bg-gray-50/60 space-y-2">
+                        {area.parameterScores.map((p: any) => {
+                          const pc = p.score >= 8 ? '#0F6E56' : p.score >= 5 ? '#BA7517' : '#A32D2D'
+                          return (
+                            <div key={p.parameterId} className="flex items-center justify-between text-xs">
+                              <span className="text-gray-500">{p.parameterName}</span>
+                              <span className="font-medium" style={{ color: pc }}>{p.score}/10</span>
+                            </div>
+                          )
+                        })}
                       </div>
-                      {area.parameterScores?.length > 0 && (
-                        <div className="space-y-1.5">
-                          {area.parameterScores.map((p: any) => {
-                            const pg = classifyGap(p.score)
-                            return (
-                              <div key={p.parameterId} className="flex items-center justify-between text-xs">
-                                <span className="text-gray-600">{p.parameterName}</span>
-                                <span className="px-2 py-0.5 rounded-full font-medium"
-                                  style={{ background: pg.bg, color: pg.color }}>{p.gapClassification}</span>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </div>
+                    )}
                   </details>
                 )
               })}
@@ -262,126 +242,92 @@ export default async function SMEProgressPage() {
         </div>
       )}
 
-      {/* ── 4. Diagnostic History ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-50">
-          <h2 className="text-sm font-semibold text-gray-700">Assessment History</h2>
+      {/* ── TA PROGRAMMES ───────────────────────────────── */}
+      {taPrograms.length > 0 && (
+        <div className="bg-white rounded-3xl shadow-sm overflow-hidden">
+          <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+            <div>
+              <h2 className="text-[15px] font-semibold text-gray-900">Development Programmes</h2>
+              <p className="text-[13px] text-gray-400 mt-0.5">{activeTAs.length} active · {completedTAs.length} completed</p>
+            </div>
+            <Link href="/sme/ta" className="text-[13px] font-medium text-violet-700 hover:text-violet-900">
+              View all →
+            </Link>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {taPrograms.slice(0, 4).map((tp: any) => {
+              const pct = tp.progressPercent ?? 0
+              const sc  = tp.status === 'completed' ? '#0F6E56' : tp.status === 'active' ? '#185FA5' : '#6B7280'
+              const sbg = tp.status === 'completed' ? '#E1F5EE' : tp.status === 'active' ? '#EFF6FF' : '#F3F4F6'
+              return (
+                <div key={String(tp._id)} className="px-6 py-4">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <p className="text-[13px] font-medium text-gray-800 leading-snug">{tp.area}</p>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold capitalize flex-shrink-0"
+                      style={{ background: sbg, color: sc }}>{tp.status}</span>
+                  </div>
+                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-1.5 rounded-full transition-all duration-500"
+                      style={{ width: `${pct}%`, background: sc }} />
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-1.5">{pct}% complete · {tp.timeframeWeeks}w programme</p>
+                </div>
+              )
+            })}
+          </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
-                {['Date', 'Period', 'Index', 'Classification'].map(h => (
-                  <th key={h} className="px-5 py-2.5 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {diagnostics.map((d: any) => {
-                const r  = d.result
-                const di = r?.lendabilityIndex ?? '-'
-                const dc = r?.classification   ?? '-'
-                const gap = r ? classifyGap(Number(di)) : null
-                return (
-                  <tr key={String(d._id)} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors">
-                    <td className="px-5 py-3 text-sm text-gray-500">{formatDate(d.createdAt)}</td>
-                    <td className="px-5 py-3 text-sm text-gray-500">{d.period}</td>
-                    <td className="px-5 py-3 text-center">
-                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider" style={{ background: r ? indexColor(Number(di)) + '15' : 'transparent', color: r ? indexColor(Number(di)) : '#6B7280' }}>
-                        {di !== '-' ? `${di}%` : '-'}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3">
-                      {dc !== '-' ? (
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-1.5 h-1.5 rounded-full" style={{ background: indexColor(Number(di)) }} />
-                          <span className="text-xs font-medium text-gray-700">{classLabel(dc)}</span>
-                        </div>
-                      ) : <span className="text-gray-400">-</span>}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+      )}
+
+      {/* ── ASSESSMENT HISTORY ──────────────────────────── */}
+      <div className="bg-white rounded-3xl shadow-sm overflow-hidden">
+        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="text-[15px] font-semibold text-gray-900">Assessment History</h2>
+          <Link href="/sme/diagnostics" className="text-[13px] font-medium text-violet-700 hover:text-violet-900">
+            View all →
+          </Link>
+        </div>
+        <div className="divide-y divide-gray-50">
+          {diagnostics.slice(0, 5).map((d: any, i: number) => {
+            const di  = d.result?.lendabilityIndex ?? null
+            const dc  = d.result?.classification   ?? null
+            const col = di !== null ? indexColor(di) : '#9CA3AF'
+            return (
+              <div key={String(d._id)}
+                className="flex items-center gap-4 px-6 py-4">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                  style={{ background: di !== null ? indexBg(di) : '#E5E7EB' }}>
+                  {i + 1}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-medium text-gray-800">{d.period}</p>
+                  <p className="text-[11px] text-gray-400">{formatDate(d.createdAt)}</p>
+                </div>
+                {di !== null && (
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-lg font-semibold" style={{ color: col }}>{di}%</p>
+                    {dc && <p className="text-[10px] text-gray-400">{classLabel(dc)}</p>}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
 
-      {/* ── 5. TA Programmes ── */}
-      {taPrograms.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-50">
-            <h2 className="text-sm font-semibold text-gray-700">My Development Programmes</h2>
-          </div>
-          <div className="divide-y divide-gray-50">
-            {taPrograms.map((tp: any) => (
-              <div key={String(tp._id)} className="px-6 py-4">
-                <div className="flex items-start justify-between gap-4 mb-3">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800">{tp.area}</p>
-                    <p className="text-xs text-gray-400 mt-0.5 capitalize">{tp.capacityLevel} · {tp.timeframeWeeks} weeks</p>
-                  </div>
-                  <span className="px-2.5 py-1 rounded-full text-xs font-semibold capitalize"
-                    style={{
-                      background: tp.status === 'completed' ? '#E1F5EE' : tp.status === 'active' ? '#EFF6FF' : '#F9FAFB',
-                      color:      tp.status === 'completed' ? '#0F6E56' : tp.status === 'active' ? '#1D4ED8' : '#6B7280',
-                    }}>
-                    {tp.status}
-                  </span>
-                </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-2 rounded-full transition-all"
-                    style={{
-                      width: `${tp.progressPercent}%`,
-                      background: tp.status === 'completed' ? '#0F6E56' : '#185FA5',
-                    }} />
-                </div>
-                <p className="text-[10px] text-gray-400 mt-1 text-right">{tp.progressPercent}% complete</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── 5b. Personal Investment Readiness Funnel ── */}
-      {result && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <h2 className="text-sm font-semibold text-gray-700 mb-1">Your Investment Readiness Journey</h2>
-          <p className="text-xs text-gray-400 mb-4">Your current position in the investment readiness process</p>
-          <div className="max-w-xs mx-auto">
-            <BankFunnel
-              stats={{
-                formsSent:           1,
-                diagnosticsComplete: diagnostics.length > 0 ? 1 : 0,
-                scored60Plus:        idx >= 60 ? 1 : 0,
-                taStarted:           taPrograms.filter((t: any) => t.status === 'active').length > 0 ? 1 : 0,
-                loanApproved:        cls === 'investment_ready' ? 1 : 0,
-              }}
-              height={220}
-              showConversion={false}
-            />
-          </div>
-          <div className="mt-3 grid grid-cols-5 text-center text-[9px] text-gray-400 gap-1">
-            {[
-              'Link received',
-              'Diagnostic done',
-              'Score 60%+',
-              'TA started',
-              'Loan ready',
-            ].map(l => <span key={l}>{l}</span>)}
-          </div>
-        </div>
-      )}
-
-      {/* ── 6. Next Step CTA ── */}
-      <div className="rounded-2xl border p-6"
-        style={{ background: ctaBg, borderColor: ctaBorder }}>
-        <h2 className="text-sm font-bold mb-2" style={{ color: ctaColor }}>{ctaTitle}</h2>
-        <p className="text-sm leading-relaxed" style={{ color: ctaColor }}>{ctaBody}</p>
+      {/* ── NEXT STEP CTA ───────────────────────────────── */}
+      <div className="rounded-3xl p-7 shadow-sm" style={{
+        background: cls === 'investment_ready'
+          ? 'linear-gradient(135deg,#E1F5EE,#F0FDF4)'
+          : cls === 'conditionally_lendable'
+          ? 'linear-gradient(135deg,#FAEEDA,#FFF7ED)'
+          : 'linear-gradient(135deg,#FCEBEB,#FFF5F5)',
+      }}>
+        <h3 className="text-base font-semibold mb-1.5" style={{ color: cta.accent }}>{cta.title}</h3>
+        <p className="text-[13px] leading-relaxed" style={{ color: cta.accent + 'CC' }}>{cta.body}</p>
         {tenant?.slug && cls !== 'high_risk' && (
           <Link href={`/diagnostic/${tenant.slug}`}
-            className="inline-block mt-4 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors"
-            style={{ background: ctaColor }}>
+            className="inline-block mt-4 px-5 py-2.5 rounded-full text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ background: cta.accent }}>
             Retake Diagnostic
           </Link>
         )}

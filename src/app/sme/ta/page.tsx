@@ -1,42 +1,34 @@
 // src/app/sme/ta/page.tsx
-// SME Personal TA Programme Tracker
-
 import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { connectDB } from '@/lib/db'
 import { User, TAProgramme, Business } from '@/models'
 
-const statusBadge = (status: string) => {
-  const map: Record<string, { bg: string; color: string }> = {
-    upcoming:  { bg: '#EFF6FF', color: '#1D4ED8' },
-    active:    { bg: '#E1F5EE', color: '#0F6E56' },
-    completed: { bg: '#F0FDF4', color: '#166534' },
-    paused:    { bg: '#FAEEDA', color: '#BA7517' },
+function statusStyle(status: string) {
+  const map: Record<string, { bg: string; color: string; dot: string }> = {
+    upcoming:  { bg: '#EFF6FF', color: '#1D4ED8', dot: '#3B82F6' },
+    active:    { bg: '#E1F5EE', color: '#0F6E56', dot: '#10B981' },
+    completed: { bg: '#F0FDF4', color: '#166534', dot: '#22C55E' },
+    paused:    { bg: '#FAEEDA', color: '#BA7517', dot: '#F59E0B' },
   }
-  const s = map[status] ?? { bg: '#F3F4F6', color: '#6B7280' }
-  return (
-    <span className="text-[10px] px-2 py-0.5 rounded-full font-medium capitalize"
-      style={{ background: s.bg, color: s.color }}>
-      {status}
-    </span>
-  )
+  return map[status] ?? { bg: '#F3F4F6', color: '#6B7280', dot: '#9CA3AF' }
 }
 
-const priorityBadge = (priority: string) => {
+function priorityStyle(priority: string) {
   const map: Record<string, { bg: string; color: string }> = {
     critical: { bg: '#FCEBEB', color: '#A32D2D' },
     high:     { bg: '#FEF3C7', color: '#B45309' },
     medium:   { bg: '#FAEEDA', color: '#BA7517' },
     low:      { bg: '#F3F4F6', color: '#6B7280' },
   }
-  const s = map[priority] ?? { bg: '#F3F4F6', color: '#6B7280' }
-  return (
-    <span className="text-[10px] px-2 py-0.5 rounded-full font-medium capitalize"
-      style={{ background: s.bg, color: s.color }}>
-      {priority}
-    </span>
-  )
+  return map[priority] ?? { bg: '#F3F4F6', color: '#6B7280' }
+}
+
+function progressColor(pct: number) {
+  if (pct >= 100) return '#0F6E56'
+  if (pct >= 60)  return '#185FA5'
+  return '#5B1FA8'
 }
 
 export default async function SMETAPage() {
@@ -50,104 +42,200 @@ export default async function SMETAPage() {
 
   if (!user.businessId) {
     return (
-      <div className="p-8 max-w-3xl mx-auto">
-        <h1 className="text-xl font-semibold text-gray-900 mb-2">TA Programme</h1>
-        <div className="bg-white rounded-xl p-8 border border-gray-100 text-center">
-          <p className="text-sm text-gray-500 mb-4">Complete your diagnostic to receive TA recommendations.</p>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Programmes</h1>
+          <p className="text-sm text-gray-500 mt-1">Technical Assistance Tracker</p>
+        </div>
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-200/60 p-16 text-center">
+          <div className="w-16 h-16 rounded-2xl mx-auto mb-5 flex items-center justify-center text-3xl"
+            style={{ background: 'linear-gradient(135deg,#EFF6FF,#F0FDF4)' }}>
+            🎯
+          </div>
+          <h2 className="text-base font-semibold text-gray-900 mb-2">No programmes yet</h2>
+          <p className="text-sm text-gray-500 mb-6 max-w-xs mx-auto leading-relaxed">
+            Complete a diagnostic to unlock personalised TA programme recommendations.
+          </p>
           <Link href="/sme/diagnostics"
-            className="inline-block px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600">
-            View diagnostics →
+            className="inline-block px-6 py-2.5 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ background: 'linear-gradient(135deg,#5B1FA8,#185FA5)' }}>
+            View assessments
           </Link>
         </div>
       </div>
     )
   }
 
-  const business = await Business.findById(user.businessId).lean() as any
+  const business   = await Business.findById(user.businessId).lean() as any
   const programmes = await TAProgramme.find({ businessId: user.businessId })
     .sort({ createdAt: -1 })
     .lean() as any[]
 
-  const active    = programmes.filter(p => p.status === 'active').length
-  const completed = programmes.filter(p => p.status === 'completed').length
-  const avgPct    = programmes.length > 0
+  const active    = programmes.filter(p => p.status === 'active')
+  const upcoming  = programmes.filter(p => p.status === 'upcoming')
+  const completed = programmes.filter(p => p.status === 'completed')
+  const paused    = programmes.filter(p => p.status === 'paused')
+
+  const avgPct = programmes.length > 0
     ? Math.round(programmes.reduce((s, p) => s + (p.progressPercent ?? 0), 0) / programmes.length)
     : 0
 
+  const stats = [
+    { label: 'Active',    value: active.length,    color: '#0F6E56' },
+    { label: 'Upcoming',  value: upcoming.length,   color: '#1D4ED8' },
+    { label: 'Completed', value: completed.length,  color: '#166534' },
+    { label: 'Avg. progress', value: `${avgPct}%`, color: '#5B1FA8' },
+  ]
+
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-gray-900">TA Programme</h1>
-        <p className="text-sm text-gray-500">{business?.name} · Technical Assistance Tracker</p>
+    <div className="space-y-6">
+
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Programmes</h1>
+        <p className="text-sm text-gray-500 mt-1">{business?.name} · Technical Assistance Tracker</p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        {[
-          { label: 'Active programmes',  value: active },
-          { label: 'Completed',          value: completed },
-          { label: 'Avg completion',     value: `${avgPct}%` },
-        ].map(s => (
-          <div key={s.label} className="bg-white rounded-xl p-4 border border-gray-100 text-center">
-            <p className="text-2xl font-semibold text-gray-900">{s.value}</p>
-            <p className="text-xs text-gray-500 mt-1">{s.label}</p>
+      {/* Stats strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {stats.map(s => (
+          <div key={s.label} className="bg-white rounded-2xl shadow-sm border border-gray-200/60 p-5">
+            <p className="text-3xl font-thin leading-none mb-1" style={{ color: s.color }}>{s.value}</p>
+            <p className="text-xs text-gray-400">{s.label}</p>
           </div>
         ))}
       </div>
 
       {programmes.length === 0 ? (
-        <div className="bg-white rounded-xl p-10 border border-gray-100 text-center">
-          <p className="text-sm text-gray-400 mb-2">No TA programmes assigned yet.</p>
-          <p className="text-xs text-gray-400">Your bank relationship manager will assign programmes after reviewing your diagnostic.</p>
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-200/60 p-14 text-center">
+          <p className="text-sm text-gray-400 mb-1">No TA programmes assigned yet.</p>
+          <p className="text-xs text-gray-400">Your relationship manager will assign programmes after reviewing your diagnostic.</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {programmes.map(prog => {
-            const pct = prog.progressPercent ?? 0
-            const expected = prog.startDate && prog.timeframeWeeks
-              ? new Date(new Date(prog.startDate).getTime() + prog.timeframeWeeks * 7 * 24 * 60 * 60 * 1000)
-                  .toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-              : '-'
-            return (
-              <div key={prog._id} className="bg-white rounded-xl border border-gray-100 p-5">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <p className="font-medium text-gray-900">{prog.area}</p>
-                    <p className="text-xs text-gray-500 capitalize mt-0.5">{prog.capacityLevel} capacity</p>
-                  </div>
-                  <div className="flex gap-2 flex-shrink-0 ml-4">
-                    {statusBadge(prog.status)}
-                    {priorityBadge(prog.priority ?? 'medium')}
-                  </div>
-                </div>
+        <div className="space-y-4">
 
-                <p className="text-sm text-gray-600 mb-3">{prog.recommendation}</p>
-
-                {/* Tools */}
-                {prog.tools?.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mb-3">
-                    {prog.tools.map((t: string) => (
-                      <span key={t} className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">{t}</span>
-                    ))}
-                  </div>
-                )}
-
-                {/* Progress bar */}
-                <div>
-                  <div className="flex justify-between text-[10px] text-gray-400 mb-1">
-                    <span>Progress</span>
-                    <span>{pct}% · Est. completion: {expected}</span>
-                  </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-2 rounded-full transition-all"
-                      style={{ width: `${pct}%`, background: pct >= 100 ? '#0F6E56' : '#185FA5' }} />
-                  </div>
-                </div>
+          {/* Active programmes */}
+          {active.length > 0 && (
+            <section>
+              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1">
+                Active · {active.length}
+              </h2>
+              <div className="space-y-3">
+                {active.map(prog => <ProgrammeCard key={prog._id} prog={prog} />)}
               </div>
-            )
-          })}
+            </section>
+          )}
+
+          {/* Upcoming */}
+          {upcoming.length > 0 && (
+            <section>
+              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1">
+                Upcoming · {upcoming.length}
+              </h2>
+              <div className="space-y-3">
+                {upcoming.map(prog => <ProgrammeCard key={prog._id} prog={prog} />)}
+              </div>
+            </section>
+          )}
+
+          {/* Paused */}
+          {paused.length > 0 && (
+            <section>
+              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1">
+                Paused · {paused.length}
+              </h2>
+              <div className="space-y-3">
+                {paused.map(prog => <ProgrammeCard key={prog._id} prog={prog} />)}
+              </div>
+            </section>
+          )}
+
+          {/* Completed */}
+          {completed.length > 0 && (
+            <section>
+              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1">
+                Completed · {completed.length}
+              </h2>
+              <div className="space-y-3">
+                {completed.map(prog => <ProgrammeCard key={prog._id} prog={prog} />)}
+              </div>
+            </section>
+          )}
+
         </div>
       )}
     </div>
   )
+}
+
+function ProgrammeCard({ prog }: { prog: any }) {
+  const pct      = prog.progressPercent ?? 0
+  const ss       = statusStyle(prog.status)
+  const ps       = priorityStyle(prog.priority ?? 'medium')
+  const endDate  = prog.startDate && prog.timeframeWeeks
+    ? formatDate(new Date(new Date(prog.startDate).getTime() + prog.timeframeWeeks * 7 * 86400 * 1000))
+    : null
+
+  return (
+    <div className="bg-white rounded-3xl shadow-sm border border-gray-200/60 p-6">
+
+      {/* Top row */}
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: ss.dot }} />
+            <h3 className="text-sm font-semibold text-gray-900 truncate">{prog.area}</h3>
+          </div>
+          <p className="text-xs text-gray-500 capitalize pl-4">{prog.capacityLevel} capacity</p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold capitalize"
+            style={{ background: ss.bg, color: ss.color }}>
+            {prog.status}
+          </span>
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold capitalize"
+            style={{ background: ps.bg, color: ps.color }}>
+            {prog.priority ?? 'medium'}
+          </span>
+        </div>
+      </div>
+
+      {/* Recommendation */}
+      {prog.recommendation && (
+        <p className="text-sm text-gray-600 leading-relaxed mb-4">{prog.recommendation}</p>
+      )}
+
+      {/* Tools */}
+      {prog.tools?.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          {prog.tools.map((t: string) => (
+            <span key={t} className="text-[10px] px-2.5 py-1 bg-gray-100 text-gray-600 rounded-full font-medium">{t}</span>
+          ))}
+        </div>
+      )}
+
+      {/* Progress bar */}
+      <div>
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-xs font-medium text-gray-500">Progress</span>
+          <div className="flex items-center gap-3">
+            {endDate && (
+              <span className="text-[10px] text-gray-400">Est. completion: {endDate}</span>
+            )}
+            <span className="text-xs font-semibold" style={{ color: progressColor(pct) }}>{pct}%</span>
+          </div>
+        </div>
+        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-1.5 rounded-full transition-all duration-500"
+            style={{ width: `${pct}%`, background: progressColor(pct) }} />
+        </div>
+      </div>
+
+    </div>
+  )
+}
+
+function formatDate(d: any) {
+  if (!d) return null
+  return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }

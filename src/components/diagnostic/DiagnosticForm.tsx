@@ -871,87 +871,152 @@ function FormTextarea({ label, value, onChange, placeholder, rows = 3 }: Labelle
 }
 
 // ── RESULT SCREEN ──────────────────────────────────────────
+function ScoreRingResult({ score, size = 140 }: { score: number; size?: number }) {
+  const r    = (size - 12) / 2
+  const circ = 2 * Math.PI * r
+  const fill = (score / 100) * circ
+  return (
+    <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth={6} />
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="white" strokeWidth={6}
+        strokeDasharray={`${fill} ${circ}`} strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function ResultScreen({ result, theme, bizName, bizEmail }: {
   result: SubmitResult; theme: BankTheme; bizName: string; bizEmail: string
 }) {
   const idx   = result.lendabilityIndex
-  const color = idx >= 80 ? '#0F6E56' : idx >= 60 ? '#BA7517' : '#A32D2D'
-  const bg    = idx >= 80 ? '#E1F5EE' : idx >= 60 ? '#FAEEDA' : '#FCEBEB'
   const label = idx >= 80 ? 'Investment Ready' : idx >= 60 ? 'Conditionally Lendable' : 'High Risk'
+  const heroBg = idx >= 80
+    ? 'linear-gradient(135deg,#0F6E56,#1a9a78)'
+    : idx >= 60
+    ? 'linear-gradient(135deg,#B45309,#d97706)'
+    : 'linear-gradient(135deg,#991B1B,#dc2626)'
 
   const levels = [
-    { label: 'Strategic capacity', value: result.strategic,  weight: '30%' },
-    { label: 'Process capacity',   value: result.process,    weight: '45%' },
-    { label: 'Support capacity',   value: result.support,    weight: '25%' },
+    { label: 'Strategic', sublabel: 'Planning & vision',   value: result.strategic, weight: 30 },
+    { label: 'Process',   sublabel: 'Operations & systems', value: result.process,   weight: 45 },
+    { label: 'Support',   sublabel: 'Governance & HR',      value: result.support,   weight: 25 },
   ]
 
+  const barColor = (v: number) => v >= 80 ? '#0F6E56' : v >= 60 ? '#BA7517' : '#A32D2D'
+
   return (
-    <div className="min-h-screen" style={{ background: '#f4f5f7' }}>
-      <div style={{ background: theme.primary }} className="px-6 py-3 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-md flex items-center justify-center text-xs font-medium text-white"
-          style={{ background: 'rgba(255,255,255,0.2)' }}>{theme.abbreviation}</div>
-        <p className="text-sm font-medium text-white">{theme.bankName} · Diagnostic Results</p>
+    <div className="min-h-screen" style={{ background: '#F5F5F7' }}>
+
+      {/* Bank header */}
+      <div className="px-6 py-3 flex items-center gap-3" style={{ background: theme.primary }}>
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-semibold text-white"
+          style={{ background: 'rgba(255,255,255,0.2)' }}>
+          {theme.abbreviation}
+        </div>
+        <p className="text-sm font-medium text-white">{theme.bankName} · Business Readiness Results</p>
       </div>
 
-      <div className="max-w-2xl mx-auto px-6 py-8 flex flex-col gap-5">
-        {/* Score banner */}
-        <div className="bg-white rounded-xl overflow-hidden border border-gray-100">
-          <div style={{ background: theme.primary }} className="px-6 py-6 text-center">
-            <p className="text-xs text-white/70 mb-2 uppercase tracking-wide">Overall Lendability Index — {result.period}</p>
-            <p className="text-6xl font-medium text-white">{idx}%</p>
-            <p className="text-lg font-medium mt-2" style={{ color: bg }}>{label}</p>
-            <p className="text-xs text-white/50 mt-1">Weighted composite: Strategic 30% · Process 45% · Support 25%</p>
-            <p className="text-xs text-white/60 mt-2">{bizName}</p>
+      <div className="max-w-2xl mx-auto px-5 py-8 flex flex-col gap-5">
+
+        {/* Hero score card */}
+        <div className="rounded-3xl shadow-xl overflow-hidden text-white relative"
+          style={{ background: heroBg }}>
+          <div className="absolute inset-0 opacity-10"
+            style={{ backgroundImage: 'radial-gradient(circle at 80% 30%, white 0%, transparent 60%)' }} />
+          <div className="relative px-8 pt-8 pb-6">
+            <p className="text-xs font-medium uppercase tracking-widest opacity-70 mb-6">
+              Overall Lendability Index · {result.period}
+            </p>
+            <div className="flex items-center gap-8">
+              {/* Ring */}
+              <div className="relative flex-shrink-0 flex items-center justify-center">
+                <ScoreRingResult score={idx} size={140} />
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-5xl font-thin leading-none">{idx}</span>
+                  <span className="text-xs opacity-60 mt-1">/ 100</span>
+                </div>
+              </div>
+              {/* Info */}
+              <div className="flex-1">
+                <p className="text-2xl font-semibold leading-tight mb-1">{label}</p>
+                <p className="text-sm opacity-70 mb-4">{bizName}</p>
+                <div className="space-y-2">
+                  {levels.map(l => (
+                    <div key={l.label}>
+                      <div className="flex justify-between text-xs mb-0.5">
+                        <span className="opacity-80">{l.label} <span className="opacity-50">({l.weight}%)</span></span>
+                        <span className="font-medium">{l.value}%</span>
+                      </div>
+                      <div className="h-1 rounded-full bg-white/20 overflow-hidden">
+                        <div className="h-1 rounded-full bg-white/90 transition-all duration-700"
+                          style={{ width: `${l.value}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="px-6 py-4 bg-gray-50 text-sm text-gray-600 text-center">
-            Results and TA recommendations sent to <strong>{bizEmail}</strong>. A bank relationship manager will contact you within 3 business days.
+          <div className="px-8 py-3 text-xs opacity-70 border-t border-white/10">
+            Weighted composite: Strategic 30% · Process 45% · Support 25%
           </div>
         </div>
 
-        {/* Capacity levels */}
-        <div className="bg-white rounded-xl p-5 border border-gray-100">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm font-medium text-gray-900">Capacity level sub-scores</p>
-            <p className="text-[10px] text-gray-400">Each contributes to the overall index</p>
+        {/* Capacity sub-score detail */}
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-200/60 p-6">
+          <p className="text-sm font-semibold text-gray-900 mb-1">Capacity sub-scores</p>
+          <p className="text-xs text-gray-400 mb-5">Each dimension contributes a weighted share to your overall index</p>
+          <div className="space-y-5">
+            {levels.map(row => {
+              const c   = barColor(row.value)
+              const gap = classifyGap(row.value)
+              return (
+                <div key={row.label}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <span className="text-sm font-medium text-gray-900">{row.label} capacity</span>
+                      <span className="ml-2 text-xs text-gray-400">{row.sublabel}</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+                        style={{ background: gapBg(gap), color: gapColor(gap) }}>
+                        {gapLabel(gap)}
+                      </span>
+                      <span className="text-sm font-semibold w-10 text-right" style={{ color: c }}>
+                        {row.value}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-2 rounded-full transition-all duration-700"
+                      style={{ width: `${row.value}%`, background: c }} />
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-1">{row.weight}% weight in composite</p>
+                </div>
+              )
+            })}
           </div>
-          {levels.map(row => {
-            const c = row.value >= 80 ? '#0F6E56' : row.value >= 60 ? '#BA7517' : '#A32D2D'
-            const gap = classifyGap(row.value)
-            return (
-              <div key={row.label} className="flex items-center gap-3 mb-3 last:mb-0">
-                <div className="w-40 flex-shrink-0">
-                  <span className="text-xs text-gray-600">{row.label}</span>
-                  <span className="ml-1.5 text-[10px] text-gray-400">({row.weight})</span>
-                </div>
-                <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-2 rounded-full transition-all duration-700"
-                    style={{ width: `${row.value}%`, background: c }} />
-                </div>
-                <span className="text-xs font-medium w-10 text-right" style={{ color: c }}>{row.value}%</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: gapBg(gap), color: gapColor(gap) }}>
-                  {gapLabel(gap)}
-                </span>
-              </div>
-            )
-          })}
         </div>
 
         {/* 12-area breakdown */}
         {result.areaScores && result.areaScores.length > 0 && (
-          <div className="bg-white rounded-xl p-5 border border-gray-100">
-            <p className="text-sm font-medium text-gray-900 mb-3">12-Area capacity breakdown</p>
-            <div className="space-y-2">
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-200/60 p-6">
+            <p className="text-sm font-semibold text-gray-900 mb-4">12-Area capacity breakdown</p>
+            <div className="space-y-3">
               {result.areaScores.sort((a, b) => a.areaNumber - b.areaNumber).map(area => {
                 const gap = classifyGap(area.percentage)
+                const c   = gapColor(gap)
                 return (
-                  <div key={area.areaName} className="flex items-center gap-2">
-                    <span className="text-[10px] text-gray-400 w-4 flex-shrink-0">{area.areaNumber}</span>
-                    <span className="text-xs text-gray-600 w-40 flex-shrink-0 truncate">{area.areaName}</span>
+                  <div key={area.areaName} className="flex items-center gap-3">
+                    <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
+                      style={{ background: c }}>
+                      {area.areaNumber}
+                    </span>
+                    <span className="text-xs text-gray-600 w-36 flex-shrink-0 truncate">{area.areaName}</span>
                     <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-1.5 rounded-full"
-                        style={{ width: `${area.percentage}%`, background: gapColor(gap) }} />
+                      <div className="h-1.5 rounded-full transition-all duration-500"
+                        style={{ width: `${area.percentage}%`, background: c }} />
                     </div>
-                    <span className="text-xs font-medium w-9 text-right" style={{ color: gapColor(gap) }}>
+                    <span className="text-xs font-semibold w-9 text-right flex-shrink-0" style={{ color: c }}>
                       {area.percentage}%
                     </span>
                   </div>
@@ -962,29 +1027,49 @@ function ResultScreen({ result, theme, bizName, bizEmail }: {
         )}
 
         {/* Projected score */}
-        <div className="bg-gray-900 rounded-xl px-6 py-5 text-center">
-          <p className="text-xs text-gray-400 mb-1">Projected index after completing all recommended TA programmes</p>
-          <p className="text-3xl font-medium text-green-400">
-            {result.projectedScore}%
-            {result.projectedScore >= 80 ? ' — Investment Ready' : ''}
-          </p>
+        <div className="rounded-3xl shadow-sm p-6 text-white relative overflow-hidden"
+          style={{ background: 'linear-gradient(135deg,#1C1C1E,#2C2C2E)' }}>
+          <div className="absolute inset-0 opacity-10"
+            style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, #22C55E 0%, transparent 60%)' }} />
+          <div className="relative flex items-center gap-6">
+            <div className="flex-1">
+              <p className="text-xs opacity-50 uppercase tracking-wider mb-1">Projected index</p>
+              <p className="text-sm opacity-70 leading-relaxed">
+                After completing all recommended TA programmes
+              </p>
+            </div>
+            <div className="text-right flex-shrink-0">
+              <p className="text-4xl font-thin text-green-400">{result.projectedScore}</p>
+              {result.projectedScore >= 80 && (
+                <p className="text-xs text-green-500 mt-0.5">Investment Ready</p>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* CTA */}
-        <div className="bg-white rounded-xl p-5 border border-gray-100 text-center">
-          <p className="text-sm font-medium text-gray-900 mb-1">Track your progress</p>
-          <p className="text-xs text-gray-500 mb-1">
-            Sign up using <strong>{bizEmail}</strong> to access your personal dashboard and monitor TA programme status.
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-200/60 p-8 text-center">
+          <div className="w-12 h-12 rounded-2xl mx-auto mb-4 flex items-center justify-center text-2xl"
+            style={{ background: 'linear-gradient(135deg,#F3F0FF,#E8F5E9)' }}>
+            📊
+          </div>
+          <p className="text-base font-semibold text-gray-900 mb-2">Track your progress</p>
+          <p className="text-sm text-gray-500 mb-1 leading-relaxed">
+            Sign up using <strong className="text-gray-800">{bizEmail}</strong> to access your personal dashboard and monitor TA programme status.
           </p>
-          <p className="text-[10px] text-gray-400 mb-4">
-            Use the same email address you submitted above — we will link your results automatically.
+          <p className="text-xs text-gray-400 mb-6">
+            Use the same email — your results will link automatically.
           </p>
           <a href="/sign-up"
-            className="inline-block px-6 py-3 rounded-lg text-sm font-medium text-white"
-            style={{ background: theme.primary }}>
-            Create my dashboard account →
+            className="inline-block px-8 py-3 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ background: heroBg }}>
+            Create my dashboard account
           </a>
+          <p className="text-[10px] text-gray-400 mt-4">
+            A relationship manager will contact you within 3 business days.
+          </p>
         </div>
+
       </div>
     </div>
   )
