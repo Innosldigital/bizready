@@ -8,7 +8,10 @@ import {
   getSMEFeedbackText,
 } from '@/lib/scoring/engine'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+function getResend() {
+  if (!process.env.RESEND_API_KEY) throw new Error('RESEND_API_KEY is not defined in environment variables')
+  return new Resend(process.env.RESEND_API_KEY)
+}
 const FROM     = process.env.RESEND_FROM_EMAIL || 'diagnostics@bizready.io'
 const REPLY_TO = process.env.RESEND_REPLY_TO   || 'support@bizready.io'
 
@@ -126,7 +129,7 @@ export async function sendDiagnosticResultEmail(params: {
 </table>
 </body></html>`
 
-  return resend.emails.send({
+  return getResend().emails.send({
     from:    FROM,
     to:      business.email,
     reply_to: REPLY_TO,
@@ -145,7 +148,7 @@ export async function sendBankNotificationEmail(params: {
 }) {
   const { bankEmail, business, result, theme, period } = params
 
-  return resend.emails.send({
+  return getResend().emails.send({
     from:    FROM,
     to:      bankEmail,
     subject: `New diagnostic: ${business.name} scored ${result.lendabilityIndex}% (${classificationLabel(result.classification)})`,
@@ -177,7 +180,7 @@ export async function sendWelcomeEmail(params: {
 }) {
   const { business, theme, formUrl } = params
 
-  return resend.emails.send({
+  return getResend().emails.send({
     from:    FROM,
     to:      business.email,
     subject: `Welcome to the ${theme.bankName} SME Investment Readiness Programme`,
