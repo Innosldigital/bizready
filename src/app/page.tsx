@@ -425,7 +425,7 @@ export default function LandingPage() {
     <div style={{ fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Inter', system-ui, sans-serif", color: '#1F1535', background: '#fff' }}>
 
       {/* ── Global styles + responsive ── */}
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         /* Keyframes */
         @keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
         .ticker-track { animation: ticker 30s linear infinite; }
@@ -488,7 +488,7 @@ export default function LandingPage() {
           .footer-grid { grid-template-columns:1fr; }
           .pricing-grid { max-width:100%; }
         }
-      `}</style>
+      ` }} />
 
       {/* ── NAV ── */}
       <nav style={{ position: 'sticky', top: 0, zIndex: 100, background: 'rgba(255,255,255,0.88)', backdropFilter: 'saturate(180%) blur(20px)', WebkitBackdropFilter: 'saturate(180%) blur(20px)', borderBottom: '0.5px solid rgba(0,0,0,0.06)' }}>
