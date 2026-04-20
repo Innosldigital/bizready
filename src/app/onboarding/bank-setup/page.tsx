@@ -2,7 +2,7 @@
 // src/app/onboarding/bank-setup/page.tsx
 // 3-step onboarding wizard for new bank admins
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useUser } from '@clerk/nextjs'
 
@@ -48,6 +48,149 @@ function lighten(hex: string): string {
     const b = Math.round(( n        & 255) + (255 - ( n        & 255)) * 0.70)
     return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`
   } catch { return '#EDE9FE' }
+}
+
+// ── Logo upload helper — resizes image to ≤200px and returns a data URL ───────
+function resizeImageToDataUrl(file: File, maxPx = 200): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = ev => {
+      const img = new Image()
+      img.onload = () => {
+        const scale = Math.min(1, maxPx / Math.max(img.width, img.height))
+        const w = Math.round(img.width * scale)
+        const h = Math.round(img.height * scale)
+        const canvas = document.createElement('canvas')
+        canvas.width = w; canvas.height = h
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0, w, h)
+        resolve(canvas.toDataURL('image/png', 0.92))
+      }
+      img.onerror = reject
+      img.src = ev.target?.result as string
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+function LogoField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [mode, setMode] = useState<'upload' | 'url'>(value.startsWith('http') ? 'url' : 'upload')
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp'].includes(file.type)) {
+      setError('Please upload a PNG, JPG, SVG or WebP file.'); return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('File must be under 5 MB.'); return
+    }
+    setError(''); setUploading(true)
+    try {
+      const dataUrl = file.type === 'image/svg+xml'
+        ? await new Promise<string>((res, rej) => {
+            const r = new FileReader()
+            r.onload = ev => res(ev.target?.result as string)
+            r.onerror = rej
+            r.readAsDataURL(file)
+          })
+        : await resizeImageToDataUrl(file)
+      onChange(dataUrl)
+    } catch { setError('Could not process image. Please try another file.') }
+    finally { setUploading(false) }
+  }
+
+  const hasLogo = Boolean(value)
+
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <label style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>Logo <span style={{ color: MUTED, fontWeight: 400 }}>(optional)</span></label>
+        {/* Mode toggle */}
+        <div style={{ display: 'flex', gap: 0, border: `1.5px solid ${BORDER}`, borderRadius: 8, overflow: 'hidden' }}>
+          {(['upload', 'url'] as const).map(m => (
+            <button key={m} type="button" onClick={() => { setMode(m); setError('') }}
+              style={{
+                padding: '4px 12px', fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer',
+                background: mode === m ? P : WHITE, color: mode === m ? WHITE : MUTED,
+                transition: 'all 0.15s',
+              }}>
+              {m === 'upload' ? '↑ Upload' : '🔗 URL'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {mode === 'upload' ? (
+        <div>
+          {/* Drop zone */}
+          <div
+            onClick={() => inputRef.current?.click()}
+            style={{
+              border: `2px dashed ${hasLogo ? P : BORDER}`,
+              borderRadius: 12, padding: '20px 16px', textAlign: 'center',
+              cursor: 'pointer', background: hasLogo ? PL : '#FAFAFA',
+              transition: 'all 0.2s',
+            }}
+            onDragOver={e => e.preventDefault()}
+            onDrop={async e => {
+              e.preventDefault()
+              const file = e.dataTransfer.files[0]
+              if (file) {
+                const fakeEvt = { target: { files: [file] } } as any
+                await handleFile(fakeEvt)
+              }
+            }}
+          >
+            {hasLogo && !value.startsWith('http') ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'center' }}>
+                <img src={value} alt="Logo preview" style={{ width: 56, height: 56, objectFit: 'contain', borderRadius: 8, border: `1px solid ${BORDER}` }} />
+                <div style={{ textAlign: 'left' }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: P, margin: 0 }}>Logo uploaded</p>
+                  <p style={{ fontSize: 11, color: MUTED, margin: '2px 0 0' }}>Click or drag to replace</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div style={{ fontSize: 28, marginBottom: 8 }}>🖼</div>
+                <p style={{ fontSize: 13, fontWeight: 600, color: TEXT, margin: 0 }}>
+                  {uploading ? 'Processing…' : 'Click to upload or drag & drop'}
+                </p>
+                <p style={{ fontSize: 11, color: MUTED, margin: '4px 0 0' }}>PNG, JPG, SVG or WebP · max 5 MB</p>
+              </>
+            )}
+          </div>
+          <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+            style={{ display: 'none' }} onChange={handleFile} />
+
+          {/* Clear button */}
+          {hasLogo && !value.startsWith('http') && (
+            <button type="button" onClick={() => { onChange(''); if (inputRef.current) inputRef.current.value = '' }}
+              style={{ marginTop: 6, fontSize: 11, color: '#A32D2D', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+              ✕ Remove logo
+            </button>
+          )}
+        </div>
+      ) : (
+        <div>
+          <input style={INP_STYLE} placeholder="https://yourbank.com/logo.png"
+            value={value.startsWith('data:') ? '' : value}
+            onChange={e => onChange(e.target.value)} />
+          <p style={{ fontSize: 11, color: MUTED, marginTop: 6 }}>Direct link to a hosted PNG, JPG or SVG</p>
+          {value && value.startsWith('http') && (
+            <img src={value} alt="Logo preview" onError={e => (e.currentTarget.style.display = 'none')}
+              style={{ marginTop: 8, height: 40, objectFit: 'contain', borderRadius: 6, border: `1px solid ${BORDER}` }} />
+          )}
+        </div>
+      )}
+
+      {error && <p style={{ fontSize: 11, color: '#A32D2D', marginTop: 6 }}>{error}</p>}
+    </div>
+  )
 }
 
 // ── Shared sub-components ─────────────────────────────────────────────────────
@@ -466,10 +609,7 @@ export default function BankSetupPage() {
         </Field>
       </div>
 
-      <Field label="Logo URL" hint="Optional - direct link to a PNG or SVG (shown in sidebar and diagnostic form)">
-        <input style={INP_STYLE} placeholder="https://yourbank.com/logo.png"
-          value={form.logoUrl} onChange={e => set('logoUrl', e.target.value)} />
-      </Field>
+      <LogoField value={form.logoUrl} onChange={v => set('logoUrl', v)} />
 
       {/* Slug preview */}
       <div style={{ background: PL, borderRadius: 8, padding: '10px 14px', fontSize: 12, color: PD, fontFamily: 'monospace', marginBottom: 28 }}>
@@ -589,7 +729,7 @@ export default function BankSetupPage() {
     { label: 'Notification email', value: form.contactEmail },
     { label: 'Country / region',value: `${form.country}, ${form.region}` },
     { label: 'Diagnostic URL',  value: `/diagnostic/${slugPreview(form.bankName)}` },
-    { label: 'Logo',            value: form.logoUrl || 'None' },
+    { label: 'Logo',            value: form.logoUrl ? (form.logoUrl.startsWith('data:') ? '(uploaded image)' : form.logoUrl) : 'None' },
     { label: 'Theme',           value: preset ? preset.label : 'Custom' },
     { label: 'Colours',         value: '', type: 'colours' },
     { label: 'Font',            value: form.fontFamily },
@@ -619,6 +759,12 @@ export default function BankSetupPage() {
                     <span style={{ fontSize: 11, color: TEXT, fontFamily: 'monospace' }}>{c}</span>
                   </div>
                 ))}
+              </div>
+            ) : label === 'Logo' && form.logoUrl ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <img src={form.logoUrl} alt="Logo" onError={e => (e.currentTarget.style.display = 'none')}
+                  style={{ height: 32, maxWidth: 80, objectFit: 'contain', borderRadius: 4, border: `1px solid ${BORDER}` }} />
+                <span style={{ fontSize: 11, color: MUTED }}>{form.logoUrl.startsWith('data:') ? 'uploaded' : 'URL'}</span>
               </div>
             ) : (
               <span style={{ fontSize: 13, color: TEXT, fontWeight: 600, textAlign: 'right', maxWidth: '60%' }}>{value}</span>
