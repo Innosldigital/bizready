@@ -8,6 +8,7 @@ import { connectDB } from '@/lib/db'
 import { User, Tenant, Diagnostic } from '@/models'
 import ManagerAssign from './ManagerAssign'
 import TaProviderControl from './TaProviderControl'
+import DeleteTenantButton from './DeleteTenantButton'
 
 // ── CONFIG ────────────────────────────────────────────────
 
@@ -233,12 +234,21 @@ export default async function TenantsPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3.5">
-                        <Link
-                          href={`/admin/diagnostics?tenantId=${tid}`}
-                          className="text-xs font-semibold text-violet-600 hover:text-violet-800 hover:underline whitespace-nowrap"
-                        >
-                          View Diagnostics
-                        </Link>
+                        <div className="flex flex-col gap-1.5">
+                          <Link
+                            href={`/admin/diagnostics?tenantId=${tid}`}
+                            className="text-xs font-semibold text-violet-600 hover:text-violet-800 hover:underline whitespace-nowrap"
+                          >
+                            View Diagnostics
+                          </Link>
+                          {tenant.plan !== 'owner' && (
+                            <DeleteTenantButton
+                              tenantId={tid}
+                              tenantName={tenant.name}
+                              diagnosticCount={diagStats.total}
+                            />
+                          )}
+                        </div>
                       </td>
                     </tr>
                   )
