@@ -30,9 +30,11 @@ export default async function OnboardingPage() {
     const intendedRole = adminEmails.includes(currentUserEmail) ? 'platform_admin' : existingUser.role
 
     // If role has changed (e.g. user added to PLATFORM_ADMIN_EMAILS), update it
-    if (intendedRole !== existingUser.role) {
-      await User.updateOne({ clerkId: userId }, { role: intendedRole })
+    // Also re-activate the account in case isActive was false (which would cause a redirect loop)
+    if (intendedRole !== existingUser.role || !existingUser.isActive) {
+      await User.updateOne({ clerkId: userId }, { role: intendedRole, isActive: true })
       existingUser.role = intendedRole
+      existingUser.isActive = true
     }
 
     try {
