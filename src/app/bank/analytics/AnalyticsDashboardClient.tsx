@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import LevelTab from './LevelTab'
 import OverviewTab from './OverviewTab'
 import type {
@@ -19,6 +19,124 @@ function formatDateLabel(value?: string | null) {
     month: 'short',
     year: 'numeric',
   })
+}
+
+const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+function MonthPicker({
+  value,
+  onChange,
+  highlightMonths,
+  label,
+}: {
+  value: string        // YYYY-MM
+  onChange: (v: string) => void
+  highlightMonths: Set<string>  // set of YYYY-MM strings that have diagnostics
+  label: string
+}) {
+  const [open, setOpen] = useState(false)
+  const [year, setYear] = useState(() => parseInt(value.slice(0, 4)) || new Date().getFullYear())
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  const selectedYear = parseInt(value.slice(0, 4))
+  const selectedMonth = parseInt(value.slice(5, 7))
+  const now = new Date()
+
+  function pick(month: number) {
+    const m = String(month).padStart(2, '0')
+    onChange(`${year}-${m}`)
+    setOpen(false)
+  }
+
+  const displayLabel = value
+    ? `${MONTH_LABELS[parseInt(value.slice(5, 7)) - 1]} ${value.slice(0, 4)}`
+    : label
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => { setYear(selectedYear || now.getFullYear()); setOpen(o => !o) }}
+        className="flex w-full items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left text-sm text-gray-700 shadow-sm transition hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
+      >
+        <span className="font-medium">{displayLabel}</span>
+        <span className={`ml-3 text-gray-400 text-xs transition ${open ? 'rotate-180' : ''}`}>▼</span>
+      </button>
+
+      {open && (
+        <div className="absolute z-40 mt-2 w-64 rounded-2xl border border-gray-200 bg-white p-4 shadow-xl">
+          {/* Year navigation */}
+          <div className="flex items-center justify-between mb-3">
+            <button
+              type="button"
+              onClick={() => setYear(y => y - 1)}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition text-sm"
+            >‹</button>
+            <span className="text-sm font-semibold text-gray-900">{year}</span>
+            <button
+              type="button"
+              onClick={() => setYear(y => y + 1)}
+              disabled={year >= now.getFullYear()}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition text-sm disabled:opacity-30"
+            >›</button>
+          </div>
+
+          {/* Month grid */}
+          <div className="grid grid-cols-3 gap-1.5">
+            {MONTH_LABELS.map((name, i) => {
+              const monthNum = i + 1
+              const key = `${year}-${String(monthNum).padStart(2, '0')}`
+              const hasData = highlightMonths.has(key)
+              const isSelected = selectedYear === year && selectedMonth === monthNum
+              const isFuture = year > now.getFullYear() || (year === now.getFullYear() && monthNum > now.getMonth() + 1)
+
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  disabled={isFuture}
+                  onClick={() => pick(monthNum)}
+                  className="relative rounded-xl py-2 text-xs font-medium transition focus:outline-none"
+                  style={{
+                    background: isSelected
+                      ? 'var(--brand-primary)'
+                      : hasData
+                      ? 'color-mix(in srgb, var(--brand-primary) 15%, white)'
+                      : 'transparent',
+                    color: isSelected ? '#fff' : isFuture ? '#d1d5db' : hasData ? 'var(--brand-primary)' : '#374151',
+                    border: hasData && !isSelected ? '1.5px solid color-mix(in srgb, var(--brand-primary) 40%, white)' : '1.5px solid transparent',
+                    cursor: isFuture ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {name}
+                  {hasData && !isSelected && (
+                    <span
+                      className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
+                      style={{ background: 'var(--brand-primary)' }}
+                    />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          {highlightMonths.size > 0 && (
+            <p className="mt-3 text-[10px] text-center text-gray-400">
+              Highlighted months have diagnostics
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function BusinessSelect({
@@ -181,6 +299,7 @@ export default function AnalyticsDashboardClient({
   const [loading, setLoading] = useState(Boolean(defaultBusinessId))
   const [error, setError] = useState<string | null>(null)
   const [scrollAreaKey, setScrollAreaKey] = useState<string | null>(null)
+  const [diagnosticMonths, setDiagnosticMonths] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (!businessId) {
@@ -221,6 +340,21 @@ export default function AnalyticsDashboardClient({
     void loadAnalytics()
     return () => controller.abort()
   }, [businessId, from, to, tenantId])
+
+  // Fetch which months have diagnostics when business changes
+  useEffect(() => {
+    if (!businessId) { setDiagnosticMonths(new Set()); return }
+    fetch(`/api/bank/analytics/months?businessId=${businessId}`)
+      .then(r => r.json())
+      .then(data => setDiagnosticMonths(new Set(data.months ?? [])))
+      .catch(() => {})
+  }, [businessId])
+
+  // When a single month is picked from the calendar, set both from and to to that month
+  const handleMonthPick = useCallback((month: string) => {
+    setFrom(month)
+    setTo(month)
+  }, [])
 
   useEffect(() => {
     if (!scrollAreaKey || activeTab === 'overview') return
@@ -376,19 +510,26 @@ export default function AnalyticsDashboardClient({
               <BusinessSelect businesses={businesses} value={businessId} onChange={setBusinessId} />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">Month Range</label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Diagnostic Period
+                {diagnosticMonths.size > 0 && (
+                  <span className="ml-2 text-xs font-normal text-gray-400">
+                    ({diagnosticMonths.size} month{diagnosticMonths.size !== 1 ? 's' : ''} with data)
+                  </span>
+                )}
+              </label>
               <div className="grid gap-3 sm:grid-cols-2">
-                <input
-                  type="month"
+                <MonthPicker
                   value={from}
-                  onChange={(event) => setFrom(event.target.value)}
-                  className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none transition focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]"
+                  onChange={handleMonthPick}
+                  highlightMonths={diagnosticMonths}
+                  label="From month"
                 />
-                <input
-                  type="month"
+                <MonthPicker
                   value={to}
-                  onChange={(event) => setTo(event.target.value)}
-                  className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none transition focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]"
+                  onChange={setTo}
+                  highlightMonths={diagnosticMonths}
+                  label="To month"
                 />
               </div>
             </div>

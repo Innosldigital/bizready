@@ -264,6 +264,73 @@ interface FormState {
   selectedPreset: string
 }
 
+// ── Shared layout components (defined at module level to prevent remount on state change) ──
+function Shell({ step, children }: { step: number; children: React.ReactNode }) {
+  return (
+    <div style={{ minHeight: '100vh', background: BG, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '48px 24px 80px' }}>
+      <div style={{ width: '100%', maxWidth: step === 2 ? 860 : 640 }}>
+        {/* Brand mark */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 36 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: P, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ color: WHITE, fontWeight: 800, fontSize: 16 }}>B</span>
+          </div>
+          <div>
+            <span style={{ fontWeight: 700, fontSize: 17, color: P }}>BizReady</span>
+            <span style={{ fontSize: 10, color: MUTED, marginLeft: 6 }}>by Innovation SL</span>
+          </div>
+        </div>
+        <Steps current={step} />
+        <div style={{ background: WHITE, borderRadius: 16, border: `0.5px solid ${BORDER}`, padding: '36px 40px', boxShadow: '0 4px 24px rgba(91,31,168,0.06)' }}>
+          {children}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function PrimaryBtn({ label, onClick, disabled }: { label: string; onClick: () => void; disabled?: boolean }) {
+  return (
+    <button onClick={onClick} disabled={disabled} style={{
+      width: '100%',
+      padding: '14px 24px',
+      borderRadius: 12,
+      background: disabled ? BORDER : P,
+      color: disabled ? MUTED : WHITE,
+      fontSize: 16,
+      fontWeight: 600,
+      border: 'none',
+      cursor: disabled ? 'not-allowed' : 'pointer',
+      boxShadow: disabled ? 'none' : '0 4px 12px rgba(91,31,168,0.25)',
+      transition: 'all 0.2s ease',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+    }}>
+      {label}
+    </button>
+  )
+}
+
+function BackBtn({ onClick }: { onClick: () => void }) {
+  return (
+    <button onClick={onClick} style={{
+      padding: '14px 24px',
+      borderRadius: 12,
+      background: WHITE,
+      color: P,
+      fontSize: 16,
+      fontWeight: 600,
+      border: `2px solid ${P}`,
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    }}>← Back</button>
+  )
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function BankSetupPage() {
   const router   = useRouter()
@@ -350,72 +417,11 @@ export default function BankSetupPage() {
     }
   }
 
-  // ── Wrapper shell ──────────────────────────────────────────────────────────
-  const Shell = ({ children }: { children: React.ReactNode }) => (
-    <div style={{ minHeight: '100vh', background: BG, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '48px 24px 80px' }}>
-      <div style={{ width: '100%', maxWidth: step === 2 ? 860 : 640 }}>
-        {/* Brand mark */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 36 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: P, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ color: WHITE, fontWeight: 800, fontSize: 16 }}>B</span>
-          </div>
-          <div>
-            <span style={{ fontWeight: 700, fontSize: 17, color: P }}>BizReady</span>
-            <span style={{ fontSize: 10, color: MUTED, marginLeft: 6 }}>by Innovation SL</span>
-          </div>
-        </div>
-        <Steps current={step} />
-        <div style={{ background: WHITE, borderRadius: 16, border: `0.5px solid ${BORDER}`, padding: '36px 40px', boxShadow: '0 4px 24px rgba(91,31,168,0.06)' }}>
-          {children}
-        </div>
-      </div>
-    </div>
-  )
-
-  // ── Buttons ────────────────────────────────────────────────────────────────
-  const PrimaryBtn = ({ label, onClick, disabled }: { label: string; onClick: () => void; disabled?: boolean }) => (
-    <button onClick={onClick} disabled={disabled} style={{
-      width: '100%', 
-      padding: '14px 24px', 
-      borderRadius: 12,
-      background: disabled ? BORDER : P, 
-      color: disabled ? MUTED : WHITE,
-      fontSize: 16, 
-      fontWeight: 600, 
-      border: 'none', 
-      cursor: disabled ? 'not-allowed' : 'pointer',
-      boxShadow: disabled ? 'none' : '0 4px 12px rgba(91,31,168,0.25)',
-      transition: 'all 0.2s ease',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-    }}>
-      {label}
-    </button>
-  )
-  const BackBtn = ({ onClick }: { onClick: () => void }) => (
-    <button onClick={onClick} style={{
-      padding: '14px 24px', 
-      borderRadius: 12,
-      background: WHITE, 
-      color: P, 
-      fontSize: 16, 
-      fontWeight: 600,
-      border: `2px solid ${P}`, 
-      cursor: 'pointer',
-      transition: 'all 0.2s ease',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-    }}>← Back</button>
-  )
-
   // ══════════════════════════════════════════════════════════════════════════
   // STEP 1 - Bank profile
   // ══════════════════════════════════════════════════════════════════════════
   if (step === 1) return (
-    <Shell>
+    <Shell step={step}>
       <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT, margin: '0 0 6px' }}>Set up your bank portal</h1>
       <p style={{ fontSize: 14, color: MUTED, margin: '0 0 28px', lineHeight: 1.6 }}>
         Tell us about your institution. This information powers your white-label diagnostic experience.
@@ -478,7 +484,7 @@ export default function BankSetupPage() {
   // STEP 2 - Choose theme
   // ══════════════════════════════════════════════════════════════════════════
   if (step === 2) return (
-    <Shell>
+    <Shell step={step}>
       <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT, margin: '0 0 6px' }}>Choose your portal theme</h1>
       <p style={{ fontSize: 14, color: MUTED, margin: '0 0 28px', lineHeight: 1.6 }}>
         Select a colour scheme - your entire portal (sidebar, dashboard, emails, diagnostic form) will adopt these colours instantly.
@@ -591,7 +597,7 @@ export default function BankSetupPage() {
   ]
 
   return (
-    <Shell>
+    <Shell step={step}>
       <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT, margin: '0 0 6px' }}>Ready to launch?</h1>
       <p style={{ fontSize: 14, color: MUTED, margin: '0 0 24px', lineHeight: 1.6 }}>
         Review your setup then launch. Your portal goes live instantly - start sharing the diagnostic link with your SME clients right away.
