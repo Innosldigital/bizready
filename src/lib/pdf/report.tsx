@@ -1,22 +1,12 @@
-'use client'
 // src/lib/pdf/report.tsx
 // @react-pdf/renderer diagnostic report template
 
 import React from 'react'
 import {
-  Document, Page, View, Text, StyleSheet, Font,
+  Document, Page, View, Text, StyleSheet,
 } from '@react-pdf/renderer'
 import { LEVEL_MAX, CAPACITY_AREAS } from '@/types'
 import type { AreaScore, TARecommendation, GapClassification } from '@/types'
-
-Font.register({
-  family: 'Inter',
-  fonts: [
-    { src: 'https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff', fontWeight: 400 },
-    { src: 'https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuGKYAZ9hiJ-Ek-_EeA.woff', fontWeight: 600 },
-    { src: 'https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuFuYAZ9hiJ-Ek-_EeA.woff', fontWeight: 700 },
-  ],
-})
 
 // ── COLOURS ───────────────────────────────────────────────
 const C = {
@@ -73,7 +63,7 @@ function formatDate(d: any) {
 }
 
 const s = StyleSheet.create({
-  page:      { fontFamily: 'Inter', fontSize: 9, color: C.body, paddingHorizontal: 36, paddingVertical: 40 },
+  page:      { fontFamily: 'Helvetica', fontSize: 9, color: C.body, paddingHorizontal: 36, paddingVertical: 40 },
   // header
   header:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, paddingBottom: 14, borderBottomWidth: 2, borderBottomColor: C.border },
   bankName:  { fontSize: 13, fontWeight: 700, color: C.heading, marginBottom: 2 },

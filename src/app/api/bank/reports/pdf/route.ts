@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
+import mongoose from 'mongoose'
 import { connectDB } from '@/lib/db'
 import { User, Tenant, Business, Diagnostic } from '@/models'
 import { renderToBuffer, Document } from '@react-pdf/renderer'
@@ -38,8 +39,7 @@ export async function GET(req: NextRequest) {
 
   const diagnostic = await Diagnostic.findOne({
     tenantId: user.tenantId,
-    businessId,
-    status: { $in: ['scored', 'reported'] },
+    businessId: new mongoose.Types.ObjectId(businessId),
   }).sort({ createdAt: -1 }).lean() as any
 
   if (!diagnostic) {
