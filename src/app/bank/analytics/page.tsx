@@ -1,13 +1,9 @@
 ﻿import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { connectDB } from '@/lib/db'
-import { Business, Tenant, User } from '@/models'
+import { Business, Diagnostic, Tenant, User } from '@/models'
 import type { AnalyticsBusinessSummary } from '@/types'
 import AnalyticsDashboardClient from './AnalyticsDashboardClient'
-
-function formatInputDate(date: Date) {
-  return date.toISOString().slice(0, 7) // YYYY-MM for month picker
-}
 
 export default async function BankAnalyticsPage() {
   const { userId } = await auth()
@@ -34,10 +30,23 @@ export default async function BankAnalyticsPage() {
     ceoName: business.ceoName ?? '',
   }))
 
-  const defaultTo = formatInputDate(new Date())
-  const defaultFromDate = new Date()
-  defaultFromDate.setFullYear(defaultFromDate.getFullYear() - 1)
-  const defaultFrom = formatInputDate(defaultFromDate)
+  // Default date range: from the most recent diagnostic date for the first business
+  const now = new Date()
+  let defaultFrom = `${now.getFullYear() - 1}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+  let defaultTo = now.toISOString().slice(0, 10)
+
+  if (businesses[0]) {
+    const latest = await Diagnostic.findOne({ tenantId: user.tenantId, businessId: businesses[0].id })
+      .sort({ createdAt: -1 })
+      .select('createdAt')
+      .lean() as any
+    if (latest?.createdAt) {
+      const d = new Date(latest.createdAt)
+      const dateStr = d.toISOString().slice(0, 10)
+      defaultFrom = dateStr
+      defaultTo = dateStr
+    }
+  }
 
   return (
     <AnalyticsDashboardClient

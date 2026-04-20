@@ -6,13 +6,13 @@ import mongoose from 'mongoose'
 import { connectDB } from '@/lib/db'
 import { Diagnostic, User } from '@/models'
 
-// Returns list of YYYY-MM strings that have at least one diagnostic for a business
+// Returns diagnostic dates for a business — both month keys (YYYY-MM) and full dates (YYYY-MM-DD)
 export async function GET(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const businessId = req.nextUrl.searchParams.get('businessId')
-  if (!businessId) return NextResponse.json({ months: [] })
+  if (!businessId) return NextResponse.json({ months: [], dates: [] })
 
   await connectDB()
 
@@ -21,24 +21,32 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const results = await Diagnostic.aggregate([
-    { $match: { businessId: new mongoose.Types.ObjectId(businessId) } },
-    {
-      $group: {
-        _id: {
-          year:  { $year: '$createdAt' },
-          month: { $month: '$createdAt' },
-        },
-      },
-    },
-    { $sort: { '_id.year': 1, '_id.month': 1 } },
-  ])
+  let bizObjectId: mongoose.Types.ObjectId
+  try {
+    bizObjectId = new mongoose.Types.ObjectId(businessId)
+  } catch {
+    return NextResponse.json({ months: [], dates: [] })
+  }
 
-  const months = results.map(r => {
-    const y = r._id.year
-    const m = String(r._id.month).padStart(2, '0')
-    return `${y}-${m}`
+  const diagnostics = await Diagnostic.find(
+    { businessId: bizObjectId },
+    { createdAt: 1 }
+  ).lean() as any[]
+
+  const monthSet = new Set<string>()
+  const dateSet = new Set<string>()
+
+  for (const d of diagnostics) {
+    const date = new Date(d.createdAt)
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    monthSet.add(`${y}-${m}`)
+    dateSet.add(`${y}-${m}-${day}`)
+  }
+
+  return NextResponse.json({
+    months: Array.from(monthSet).sort(),
+    dates: Array.from(dateSet).sort(),
   })
-
-  return NextResponse.json({ months })
 }

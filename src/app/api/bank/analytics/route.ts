@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
+import mongoose from 'mongoose'
 import { connectDB } from '@/lib/db'
 import { Business, Diagnostic, Tenant, User } from '@/models'
 import { canAccessFullAnalytics } from '@/lib/plan-access'
@@ -499,7 +500,7 @@ export async function GET(req: NextRequest) {
 
   const query: Record<string, unknown> = {
     tenantId: user.tenantId,
-    businessId,
+    businessId: new mongoose.Types.ObjectId(businessId),
   }
 
   const from = parseStartDate(searchParams.get('from'))

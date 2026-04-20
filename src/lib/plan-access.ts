@@ -15,7 +15,7 @@ export function canAccessReports(plan: PlanTier) {
 }
 
 export function canAccessFullAnalytics(plan: PlanTier) {
-  return isPlanAtLeast(plan, 'growth')
+  return isPlanAtLeast(plan, 'starter')
 }
 
 export function canAccessApi(plan: PlanTier) {

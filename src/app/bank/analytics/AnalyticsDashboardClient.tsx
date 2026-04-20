@@ -22,49 +22,92 @@ function formatDateLabel(value?: string | null) {
 }
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const DAY_NAMES = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 
-function MonthPicker({
+// Returns "16 Apr 2026" from "2026-04-16"
+function formatFullDate(value: string) {
+  if (!value) return ''
+  const [y, m, d] = value.split('-')
+  if (!y || !m) return value
+  if (!d) return `${MONTH_LABELS[parseInt(m) - 1]} ${y}`
+  return `${parseInt(d)} ${MONTH_LABELS[parseInt(m) - 1]} ${y}`
+}
+
+function DiagnosticDatePicker({
   value,
   onChange,
   highlightMonths,
+  highlightDates,
   label,
 }: {
-  value: string        // YYYY-MM
+  value: string           // YYYY-MM-DD or YYYY-MM
   onChange: (v: string) => void
-  highlightMonths: Set<string>  // set of YYYY-MM strings that have diagnostics
+  highlightMonths: Set<string>  // YYYY-MM keys with diagnostics
+  highlightDates: Set<string>   // YYYY-MM-DD keys with diagnostics
   label: string
 }) {
+  const now = new Date()
+  const initYear = value ? parseInt(value.slice(0, 4)) : now.getFullYear()
   const [open, setOpen] = useState(false)
-  const [year, setYear] = useState(() => parseInt(value.slice(0, 4)) || new Date().getFullYear())
+  // Start at most recent year with data, or current year
+  const [year, setYear] = useState(() => {
+    if (highlightMonths.size > 0) {
+      return parseInt(Array.from(highlightMonths).sort().at(-1)!.slice(0, 4))
+    }
+    return initYear || now.getFullYear()
+  })
+  const [drillMonth, setDrillMonth] = useState<number | null>(null) // 1-12 when in day view
   const ref = useRef<HTMLDivElement>(null)
+
+  // When highlightMonths loads, jump to the latest year with data
+  useEffect(() => {
+    if (highlightMonths.size > 0) {
+      const latestYear = parseInt(Array.from(highlightMonths).sort().at(-1)!.slice(0, 4))
+      setYear(latestYear)
+    }
+  }, [highlightMonths])
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false)
+      if (!ref.current?.contains(e.target as Node)) { setOpen(false); setDrillMonth(null) }
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  const selectedYear = parseInt(value.slice(0, 4))
-  const selectedMonth = parseInt(value.slice(5, 7))
-  const now = new Date()
+  const selYear = value ? parseInt(value.slice(0, 4)) : 0
+  const selMonth = value ? parseInt(value.slice(5, 7)) : 0
+  const selDay = value && value.length >= 10 ? parseInt(value.slice(8, 10)) : 0
 
-  function pick(month: number) {
-    const m = String(month).padStart(2, '0')
-    onChange(`${year}-${m}`)
-    setOpen(false)
+  function pickMonth(month: number) {
+    setDrillMonth(month)
   }
 
-  const displayLabel = value
-    ? `${MONTH_LABELS[parseInt(value.slice(5, 7)) - 1]} ${value.slice(0, 4)}`
-    : label
+  function pickDay(day: number) {
+    const m = String(drillMonth!).padStart(2, '0')
+    const d = String(day).padStart(2, '0')
+    onChange(`${year}-${m}-${d}`)
+    setOpen(false)
+    setDrillMonth(null)
+  }
+
+  // Build day grid for drillMonth
+  function buildDayGrid(y: number, m: number) {
+    const firstDay = new Date(y, m - 1, 1).getDay()
+    const daysInMonth = new Date(y, m, 0).getDate()
+    const cells: (number | null)[] = Array(firstDay).fill(null)
+    for (let d = 1; d <= daysInMonth; d++) cells.push(d)
+    while (cells.length % 7 !== 0) cells.push(null)
+    return cells
+  }
+
+  const displayLabel = value ? formatFullDate(value) : label
 
   return (
     <div ref={ref} className="relative">
       <button
         type="button"
-        onClick={() => { setYear(selectedYear || now.getFullYear()); setOpen(o => !o) }}
+        onClick={() => { setOpen(o => !o); setDrillMonth(null) }}
         className="flex w-full items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left text-sm text-gray-700 shadow-sm transition hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
       >
         <span className="font-medium">{displayLabel}</span>
@@ -72,66 +115,127 @@ function MonthPicker({
       </button>
 
       {open && (
-        <div className="absolute z-40 mt-2 w-64 rounded-2xl border border-gray-200 bg-white p-4 shadow-xl">
-          {/* Year navigation */}
-          <div className="flex items-center justify-between mb-3">
-            <button
-              type="button"
-              onClick={() => setYear(y => y - 1)}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition text-sm"
-            >‹</button>
-            <span className="text-sm font-semibold text-gray-900">{year}</span>
-            <button
-              type="button"
-              onClick={() => setYear(y => y + 1)}
-              disabled={year >= now.getFullYear()}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition text-sm disabled:opacity-30"
-            >›</button>
-          </div>
+        <div className="absolute z-40 mt-2 w-72 rounded-2xl border border-gray-200 bg-white p-4 shadow-xl">
 
-          {/* Month grid */}
-          <div className="grid grid-cols-3 gap-1.5">
-            {MONTH_LABELS.map((name, i) => {
-              const monthNum = i + 1
-              const key = `${year}-${String(monthNum).padStart(2, '0')}`
-              const hasData = highlightMonths.has(key)
-              const isSelected = selectedYear === year && selectedMonth === monthNum
-              const isFuture = year > now.getFullYear() || (year === now.getFullYear() && monthNum > now.getMonth() + 1)
-
-              return (
-                <button
-                  key={name}
-                  type="button"
-                  disabled={isFuture}
-                  onClick={() => pick(monthNum)}
-                  className="relative rounded-xl py-2 text-xs font-medium transition focus:outline-none"
-                  style={{
-                    background: isSelected
-                      ? 'var(--brand-primary)'
-                      : hasData
-                      ? 'color-mix(in srgb, var(--brand-primary) 15%, white)'
-                      : 'transparent',
-                    color: isSelected ? '#fff' : isFuture ? '#d1d5db' : hasData ? 'var(--brand-primary)' : '#374151',
-                    border: hasData && !isSelected ? '1.5px solid color-mix(in srgb, var(--brand-primary) 40%, white)' : '1.5px solid transparent',
-                    cursor: isFuture ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  {name}
-                  {hasData && !isSelected && (
-                    <span
-                      className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
-                      style={{ background: 'var(--brand-primary)' }}
-                    />
-                  )}
+          {/* ── DAY VIEW ── */}
+          {drillMonth !== null ? (
+            <>
+              <div className="flex items-center justify-between mb-3">
+                <button type="button" onClick={() => setDrillMonth(null)}
+                  className="text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1">
+                  ‹ {MONTH_LABELS[drillMonth - 1]} {year}
                 </button>
-              )
-            })}
-          </div>
+                <span className="text-sm font-semibold text-gray-900">
+                  {MONTH_LABELS[drillMonth - 1]} {year}
+                </span>
+                <div className="w-16" />
+              </div>
 
-          {highlightMonths.size > 0 && (
-            <p className="mt-3 text-[10px] text-center text-gray-400">
-              Highlighted months have diagnostics
-            </p>
+              {/* Day-of-week headers */}
+              <div className="grid grid-cols-7 mb-1">
+                {DAY_NAMES.map(d => (
+                  <div key={d} className="text-center text-[10px] font-medium text-gray-400 py-1">{d}</div>
+                ))}
+              </div>
+
+              {/* Day cells */}
+              <div className="grid grid-cols-7 gap-0.5">
+                {buildDayGrid(year, drillMonth).map((day, i) => {
+                  if (!day) return <div key={i} />
+                  const dateKey = `${year}-${String(drillMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+                  const hasData = highlightDates.has(dateKey)
+                  const isSelected = selYear === year && selMonth === drillMonth && selDay === day
+                  const isFuture = new Date(year, drillMonth - 1, day) > now
+
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      disabled={isFuture}
+                      onClick={() => pickDay(day)}
+                      className="relative w-full aspect-square flex items-center justify-center rounded-lg text-xs font-medium transition focus:outline-none"
+                      style={{
+                        background: isSelected ? 'var(--brand-primary)'
+                          : hasData ? 'color-mix(in srgb, var(--brand-primary) 18%, white)'
+                          : 'transparent',
+                        color: isSelected ? '#fff'
+                          : isFuture ? '#d1d5db'
+                          : hasData ? 'var(--brand-primary)'
+                          : '#374151',
+                        fontWeight: hasData ? 700 : 400,
+                        cursor: isFuture ? 'not-allowed' : 'pointer',
+                        border: hasData && !isSelected
+                          ? '1.5px solid color-mix(in srgb, var(--brand-primary) 35%, white)'
+                          : '1.5px solid transparent',
+                      }}
+                    >
+                      {day}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {highlightDates.size > 0 && (
+                <p className="mt-3 text-[10px] text-center text-gray-400">
+                  Highlighted days have diagnostics
+                </p>
+              )}
+            </>
+          ) : (
+
+          /* ── MONTH VIEW ── */
+          <>
+            <div className="flex items-center justify-between mb-3">
+              <button type="button" onClick={() => setYear(y => y - 1)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition text-sm">‹</button>
+              <span className="text-sm font-semibold text-gray-900">{year}</span>
+              <button type="button" onClick={() => setYear(y => y + 1)}
+                disabled={year >= now.getFullYear()}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition text-sm disabled:opacity-30">›</button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-1.5">
+              {MONTH_LABELS.map((name, i) => {
+                const monthNum = i + 1
+                const key = `${year}-${String(monthNum).padStart(2, '0')}`
+                const hasData = highlightMonths.has(key)
+                const isSelected = selYear === year && selMonth === monthNum
+                const isFuture = year > now.getFullYear() || (year === now.getFullYear() && monthNum > now.getMonth() + 1)
+
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    disabled={isFuture}
+                    onClick={() => pickMonth(monthNum)}
+                    className="relative rounded-xl py-2 text-xs font-medium transition focus:outline-none"
+                    style={{
+                      background: isSelected ? 'var(--brand-primary)'
+                        : hasData ? 'color-mix(in srgb, var(--brand-primary) 15%, white)'
+                        : 'transparent',
+                      color: isSelected ? '#fff' : isFuture ? '#d1d5db' : hasData ? 'var(--brand-primary)' : '#374151',
+                      border: hasData && !isSelected
+                        ? '1.5px solid color-mix(in srgb, var(--brand-primary) 40%, white)'
+                        : '1.5px solid transparent',
+                      cursor: isFuture ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {name}
+                    {hasData && !isSelected && (
+                      <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
+                        style={{ background: 'var(--brand-primary)' }} />
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+
+            {highlightMonths.size > 0 && (
+              <p className="mt-3 text-[10px] text-center text-gray-400">
+                Click a month to see diagnostic days
+              </p>
+            )}
+          </>
           )}
         </div>
       )}
@@ -231,32 +335,49 @@ function BusinessSelect({
 function StickyLegend() {
   const items = [
     {
-      label: '0-40% = High Priority Gap - Main gap to be addressed during TA',
+      range: '0 – 40%',
+      label: 'High Priority Gap',
+      detail: 'Main gap to be addressed during TA',
       background: '#FCEBEB',
+      border: '#F5C6C6',
       color: '#A32D2D',
+      dot: '#A32D2D',
     },
     {
-      label: '50-70% = Low Priority Gap - Second priority gap to be addressed',
+      range: '50 – 70%',
+      label: 'Low Priority Gap',
+      detail: 'Second priority gap to be addressed',
       background: '#FAEEDA',
+      border: '#F0D5A0',
       color: '#BA7517',
+      dot: '#BA7517',
     },
     {
-      label: '80-100% = Ideal Performance - No TA required in this area',
+      range: '80 – 100%',
+      label: 'Ideal Performance',
+      detail: 'No TA required in this area',
       background: '#E1F5EE',
+      border: '#A7DFC8',
       color: '#0F6E56',
+      dot: '#0F6E56',
     },
   ]
 
   return (
-    <div className="flex flex-wrap gap-3">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
       {items.map((item) => (
-        <span
+        <div
           key={item.label}
-          className="inline-flex rounded-full px-4 py-2 text-sm font-medium"
-          style={{ backgroundColor: item.background, color: item.color }}
+          className="flex items-start gap-3 rounded-xl px-4 py-3"
+          style={{ backgroundColor: item.background, border: `1px solid ${item.border}` }}
         >
-          {item.label}
-        </span>
+          <span className="mt-1 h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ background: item.dot }} />
+          <div>
+            <p className="text-xs font-bold" style={{ color: item.color }}>{item.range}</p>
+            <p className="text-sm font-semibold" style={{ color: item.color }}>{item.label}</p>
+            <p className="mt-0.5 text-xs" style={{ color: item.color, opacity: 0.8 }}>{item.detail}</p>
+          </div>
+        </div>
       ))}
     </div>
   )
@@ -300,6 +421,7 @@ export default function AnalyticsDashboardClient({
   const [error, setError] = useState<string | null>(null)
   const [scrollAreaKey, setScrollAreaKey] = useState<string | null>(null)
   const [diagnosticMonths, setDiagnosticMonths] = useState<Set<string>>(new Set())
+  const [diagnosticDates, setDiagnosticDates] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (!businessId) {
@@ -341,19 +463,22 @@ export default function AnalyticsDashboardClient({
     return () => controller.abort()
   }, [businessId, from, to, tenantId])
 
-  // Fetch which months have diagnostics when business changes
+  // Fetch which months/dates have diagnostics when business changes
   useEffect(() => {
-    if (!businessId) { setDiagnosticMonths(new Set()); return }
+    if (!businessId) { setDiagnosticMonths(new Set()); setDiagnosticDates(new Set()); return }
     fetch(`/api/bank/analytics/months?businessId=${businessId}`)
       .then(r => r.json())
-      .then(data => setDiagnosticMonths(new Set(data.months ?? [])))
+      .then(data => {
+        setDiagnosticMonths(new Set(data.months ?? []))
+        setDiagnosticDates(new Set(data.dates ?? []))
+      })
       .catch(() => {})
   }, [businessId])
 
-  // When a single month is picked from the calendar, set both from and to to that month
-  const handleMonthPick = useCallback((month: string) => {
-    setFrom(month)
-    setTo(month)
+  // When a date is picked, set from = start of that day, to = end of that day
+  const handleDatePick = useCallback((date: string) => {
+    setFrom(date)
+    setTo(date)
   }, [])
 
   useEffect(() => {
@@ -512,24 +637,26 @@ export default function AnalyticsDashboardClient({
             <div>
               <label className="mb-2 block text-sm font-medium text-gray-700">
                 Diagnostic Period
-                {diagnosticMonths.size > 0 && (
+                {diagnosticDates.size > 0 && (
                   <span className="ml-2 text-xs font-normal text-gray-400">
-                    ({diagnosticMonths.size} month{diagnosticMonths.size !== 1 ? 's' : ''} with data)
+                    ({diagnosticDates.size} diagnostic{diagnosticDates.size !== 1 ? 's' : ''} available)
                   </span>
                 )}
               </label>
               <div className="grid gap-3 sm:grid-cols-2">
-                <MonthPicker
+                <DiagnosticDatePicker
                   value={from}
-                  onChange={handleMonthPick}
+                  onChange={handleDatePick}
                   highlightMonths={diagnosticMonths}
-                  label="From month"
+                  highlightDates={diagnosticDates}
+                  label="From date"
                 />
-                <MonthPicker
+                <DiagnosticDatePicker
                   value={to}
                   onChange={setTo}
                   highlightMonths={diagnosticMonths}
-                  label="To month"
+                  highlightDates={diagnosticDates}
+                  label="To date"
                 />
               </div>
             </div>
