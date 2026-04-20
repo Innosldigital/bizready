@@ -151,9 +151,9 @@ const PLANS = [
   },
   {
     name: 'Enterprise', popular: false,
-    desc: 'For regional and international banks across multiple countries.',
+    desc: 'For regional and international financial institutions operating across multiple regions.',
     cta: 'Contact us', ctaSignup: false, ctaHref: '/contact',
-    features: ['Everything in Growth', 'Multi-country deployment', 'Custom scoring weights per country', 'Full API access', 'Dedicated success manager', 'SLA guarantee (99.9% uptime)', 'White-glove onboarding'],
+    features: ['Everything in Growth', 'Multi-region deployment', 'Custom scoring weights', 'Full API access', 'Dedicated success manager', '< 1h response SLA', 'White-glove onboarding'],
   },
 ]
 
