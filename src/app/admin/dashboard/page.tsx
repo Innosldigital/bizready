@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { connectDB } from '@/lib/db'
 import { Business, Diagnostic, TAProgramme, Tenant, User } from '@/models'
-import { PLANS, classifyGap, gapBg, gapColor, gapLabel } from '@/types'
+import { classifyGap, gapBg, gapColor, gapLabel } from '@/types'
 
 const CLASS_BADGES: Record<string, { label: string; bg: string; text: string }> = {
   investment_ready:       { label: 'Investment Ready', bg: '#E1F5EE', text: '#0F6E56' },
@@ -158,11 +158,8 @@ export default async function AdminDashboardPage() {
   const tenantMap = new Map(tenantDocs.map(tenant => [String(tenant._id), tenant]))
 
   const activeTenants = tenants.filter(tenant => tenant.isActive)
-  const payingTenants = activeTenants.filter(tenant => tenant.plan !== 'owner')
-  const platformMRR = payingTenants.reduce((sum, tenant) => {
-    const plan = tenant.plan as keyof typeof PLANS
-    return sum + (PLANS[plan]?.price ?? 0)
-  }, 0)
+  // Revenue shown only when tenants pay via Monime — $0 until payment integration is live
+  const platformMRR = 0
 
   const avgPlatformIndex = Math.round(scoreAgg[0]?.avgIndex ?? 0)
   const classCounts = classAgg.reduce((acc, item) => {
@@ -261,7 +258,7 @@ export default async function AdminDashboardPage() {
       <div className="grid grid-cols-2 xl:grid-cols-5 gap-4">
         {[
           { label: 'Active tenants', value: activeTenants.length.toLocaleString(), sub: `${tenants.length} total tenants` },
-          { label: 'Platform MRR', value: `$${platformMRR.toLocaleString()}`, sub: `ARR $${(platformMRR * 12).toLocaleString()}` },
+          { label: 'Revenue Collected', value: `$${platformMRR.toLocaleString()}`, sub: 'Live when Monime billing is active' },
           { label: 'SME businesses', value: totalBusinesses.toLocaleString(), sub: `${diagnosticsThisMonth.toLocaleString()} diagnostics this month` },
           { label: 'Diagnostics scored', value: totalDiagnostics.toLocaleString(), sub: `${avgPlatformIndex}% average platform index` },
           { label: 'TA programmes', value: totalTAProgrammes.toLocaleString(), sub: `${activeTAProgrammes} active / ${completedTAProgrammes} completed` },
