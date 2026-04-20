@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { UserButton } from '@clerk/nextjs'
 import { ROLE_LABELS, ROLE_COLORS } from '@/lib/roles'
+import { useDarkMode } from '@/components/providers/DarkModeContext'
 
 type NavItem = {
   label: string
@@ -30,6 +31,7 @@ export default function AdminSidebar({ userRole }: { userRole: string }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const path = usePathname()
   const isActive = (href: string) => path === href || path.startsWith(`${href}/`)
+  const { isDark, toggle } = useDarkMode()
 
   const visibleNav = NAV.filter(item =>
     !item.roles || item.roles.includes(userRole)
@@ -79,10 +81,10 @@ export default function AdminSidebar({ userRole }: { userRole: string }) {
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar — fixed on mobile, sticky on desktop */}
       <aside className={`
-        fixed lg:static inset-y-0 left-0 z-50
-        w-64 lg:w-48 flex-shrink-0 flex flex-col min-h-screen
+        fixed lg:sticky lg:top-0 lg:h-screen inset-y-0 left-0 z-50
+        w-64 lg:w-48 flex-shrink-0 flex flex-col
         transform transition-transform duration-300 ease-in-out
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `} style={{ background: '#3B1270' }}>
@@ -100,7 +102,7 @@ export default function AdminSidebar({ userRole }: { userRole: string }) {
         </div>
 
         {/* Logo */}
-        <div className="px-4 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.12)' }}>
+        <div className="px-4 py-4 border-b flex-shrink-0" style={{ borderColor: 'rgba(255,255,255,0.12)' }}>
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-md flex items-center justify-center text-[10px] font-medium"
               style={{ background: 'rgba(255,255,255,0.15)', color: '#fff' }}>
@@ -113,17 +115,39 @@ export default function AdminSidebar({ userRole }: { userRole: string }) {
           </div>
         </div>
 
-        {/* Role badge */}
-        <div className="px-4 py-2.5 border-b" style={{ borderColor: 'rgba(255,255,255,0.12)' }}>
-          <p className="text-[9px]" style={{ color: 'rgba(255,255,255,0.4)' }}>Access level</p>
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-            style={{ background: roleColor.bg, color: roleColor.text }}>
-            {ROLE_LABELS[userRole] ?? userRole}
-          </span>
+        {/* Role badge + dark mode toggle */}
+        <div className="px-4 py-2.5 border-b flex items-center justify-between flex-shrink-0"
+          style={{ borderColor: 'rgba(255,255,255,0.12)' }}>
+          <div>
+            <p className="text-[9px]" style={{ color: 'rgba(255,255,255,0.4)' }}>Access level</p>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+              style={{ background: roleColor.bg, color: roleColor.text }}>
+              {ROLE_LABELS[userRole] ?? userRole}
+            </span>
+          </div>
+          <button
+            onClick={toggle}
+            title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            className="w-7 h-7 rounded-md flex items-center justify-center transition-colors"
+            style={{ background: 'rgba(255,255,255,0.12)' }}
+          >
+            {isDark ? (
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+              </svg>
+            ) : (
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+              </svg>
+            )}
+          </button>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 px-2 py-3 flex flex-col gap-0.5">
+        {/* Nav — scrollable */}
+        <nav className="flex-1 overflow-y-auto px-2 py-3 flex flex-col gap-0.5">
           {overviewItems.length > 0 && (
             <>
               <p className="text-[9px] px-2 py-1 font-medium uppercase tracking-wider"
@@ -148,7 +172,7 @@ export default function AdminSidebar({ userRole }: { userRole: string }) {
         </nav>
 
         {/* User */}
-        <div className="px-4 py-3 border-t flex items-center gap-2.5"
+        <div className="px-4 py-3 border-t flex items-center gap-2.5 flex-shrink-0"
           style={{ borderColor: 'rgba(255,255,255,0.12)' }}>
           <UserButton afterSignOutUrl="/sign-in"
             appearance={{ elements: { avatarBox: 'w-7 h-7' } }} />

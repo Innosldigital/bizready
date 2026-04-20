@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import { connectDB } from '@/lib/db'
 import { User } from '@/models'
 import { isInnoSLRole, canViewAdminDashboard } from '@/lib/roles'
-import AdminSidebar from '@/components/layout/AdminSidebar'
+import AdminShell from '@/components/layout/AdminShell'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const { userId } = await auth()
@@ -24,9 +24,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!canViewAdminDashboard(user.role)) redirect('/dashboard')
 
   return (
-    <div className="flex min-h-screen">
-      <AdminSidebar userRole={user.role} />
-      <main className="flex-1 min-w-0 bg-gray-50 pt-16 lg:pt-0">{children}</main>
-    </div>
+    <AdminShell userRole={user.role}>
+      {children}
+    </AdminShell>
   )
 }

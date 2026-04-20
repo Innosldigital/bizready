@@ -20,3 +20,120 @@
 @layer base {
   body { @apply bg-gray-50 text-gray-900 antialiased; }
 }
+
+/* ── DARK MODE ──────────────────────────────────────────────────────────────── */
+.dashboard-dark {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+/* Backgrounds */
+.dashboard-dark .bg-white          { background-color: #1e293b !important; }
+.dashboard-dark .bg-gray-50        { background-color: #0f172a !important; }
+.dashboard-dark .bg-gray-100       { background-color: #1e293b !important; }
+.dashboard-dark .bg-gray-200       { background-color: #334155 !important; }
+
+/* Text */
+.dashboard-dark .text-gray-900     { color: #f1f5f9 !important; }
+.dashboard-dark .text-gray-800     { color: #e2e8f0 !important; }
+.dashboard-dark .text-gray-700     { color: #cbd5e1 !important; }
+.dashboard-dark .text-gray-600     { color: #94a3b8 !important; }
+.dashboard-dark .text-gray-500     { color: #64748b !important; }
+.dashboard-dark .text-gray-400     { color: #475569 !important; }
+
+/* Borders */
+.dashboard-dark .border-gray-50,
+.dashboard-dark .border-gray-100,
+.dashboard-dark .border-gray-200   { border-color: #334155 !important; }
+
+/* Shadows */
+.dashboard-dark .shadow-sm         { box-shadow: 0 1px 3px rgba(0,0,0,0.5) !important; }
+.dashboard-dark .shadow            { box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important; }
+
+/* Tables */
+.dashboard-dark table              { color: #e2e8f0; }
+.dashboard-dark thead,
+.dashboard-dark .bg-gray-50.thead  { background-color: #1e293b !important; }
+.dashboard-dark tbody tr:hover     { background-color: rgba(255,255,255,0.04) !important; }
+.dashboard-dark th                 { color: #94a3b8 !important; }
+.dashboard-dark td                 { color: #cbd5e1; }
+
+/* Form inputs */
+.dashboard-dark input:not([type="color"]),
+.dashboard-dark select,
+.dashboard-dark textarea {
+  background-color: #1e293b !important;
+  color: #e2e8f0 !important;
+  border-color: #334155 !important;
+}
+.dashboard-dark input::placeholder,
+.dashboard-dark textarea::placeholder { color: #475569 !important; }
+
+/* Sticky filter bars */
+.dashboard-dark .bg-gray-50\/95    { background-color: rgba(15,23,42,0.95) !important; }
+
+/* Stat/metric numbers that use emerald */
+.dashboard-dark .text-emerald-700  { color: #34d399 !important; }
+
+/* ── NAVIGATION PROGRESS (colour set via var in the component) ────────────── */
+
+/* ── LOADING EFFECTS ────────────────────────────────────────────────────────── */
+
+/* Skeleton pulse */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+.skeleton {
+  background: #e5e7eb;
+  border-radius: 6px;
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+}
+.dashboard-dark .skeleton { background: #334155; }
+
+/* Button loading spinner */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.btn-loading {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.75;
+}
+.btn-loading::after {
+  content: '';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin-top: -7px;
+  border: 2px solid rgba(255,255,255,0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+}
+
+/* Fade-in for page content */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.page-enter {
+  animation: fadeInUp 0.22s ease both;
+}
+
+/* Link hover shimmer */
+.nav-link-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.nav-link-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%);
+  transform: translateX(-100%);
+  transition: transform 0.4s ease;
+}
+.nav-link-shimmer:hover::after { transform: translateX(100%); }
