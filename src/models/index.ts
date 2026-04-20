@@ -42,6 +42,7 @@ const TenantSchema = new Schema({
   successManagerName:     { type: String },
   successManagerEmail:    { type: String },
   onboardingSteps:        { type: [String], default: [] },  // completed step keys
+  taProvider:             { type: String, enum: ['innovation_sl', 'self'], default: 'self' },
 }, { timestamps: true })
 
 // ── USER ──────────────────────────────────────────────────
@@ -91,6 +92,8 @@ const BusinessSchema = new Schema({
   latestClassification:    { type: String },
   taStatus:                { type: String, enum: ['none','active','completed'], default: 'none' },
   bankRelationshipManager: { type: String },
+  focalPersonId:           { type: Schema.Types.ObjectId, ref: 'User', default: null },
+  focalPersonName:         { type: String },
 }, { timestamps: true })
 
 // ── QUESTION BANK ─────────────────────────────────────────

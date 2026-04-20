@@ -19,6 +19,7 @@ const NAV: NavItem[] = [
   { label: 'Tenants',       href: '/admin/tenants',     icon: '\u25A1', group: 'overview',  roles: ['platform_admin', 'innosl_admin'] },
   { label: 'Diagnostics',   href: '/admin/diagnostics', icon: '\u2261', group: 'overview',  roles: ['platform_admin', 'innosl_admin', 'project_manager'] },
   { label: 'My SMEs',       href: '/admin/my-smes',     icon: '\u25CB', group: 'overview',  roles: ['project_manager', 'focal_person'] },
+  { label: 'TA Programmes', href: '/admin/ta',           icon: '\u25B6', group: 'overview',  roles: ['platform_admin', 'innosl_admin', 'project_manager'] },
   { label: 'Question bank', href: '/admin/questions',   icon: '\u25CF', group: 'platform',  roles: ['platform_admin', 'innosl_admin'] },
   { label: 'Audit log',     href: '/admin/audit',       icon: '\u25A5', group: 'platform',  roles: ['platform_admin'] },
   { label: 'Billing',       href: '/admin/billing',     icon: '\u25A4', group: 'platform',  roles: ['platform_admin'] },

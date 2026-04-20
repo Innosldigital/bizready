@@ -8,6 +8,7 @@ import { auth } from '@clerk/nextjs/server'
 import { connectDB } from '@/lib/db'
 import { User, Tenant } from '@/models'
 import { INNOSL_ROLES, ASSIGNABLE_INNOSL_ROLES, isInnoSLRole } from '@/lib/roles'
+import { sendStaffInviteEmail } from '@/lib/email'
 
 async function getAdmin() {
   const { userId } = await auth()
@@ -68,6 +69,19 @@ export async function POST(req: NextRequest) {
     isPending:   true,
     isActive:    true,
   })
+
+  // Send invitation email (non-fatal — staff record is already created)
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://bizready.vercel.app'
+  try {
+    await sendStaffInviteEmail({
+      name:      name.trim(),
+      email:     normalEmail,
+      role,
+      signUpUrl: `${appUrl}/sign-up`,
+    })
+  } catch (emailErr) {
+    console.error('[staff invite] Email failed (non-fatal):', emailErr)
+  }
 
   return NextResponse.json({ staff }, { status: 201 })
 }

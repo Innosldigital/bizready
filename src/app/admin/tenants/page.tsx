@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { connectDB } from '@/lib/db'
 import { User, Tenant, Diagnostic } from '@/models'
 import ManagerAssign from './ManagerAssign'
+import TaProviderControl from './TaProviderControl'
 
 // ── CONFIG ────────────────────────────────────────────────
 
@@ -147,7 +148,7 @@ export default async function TenantsPage() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  {['Name', 'Plan', 'Total Diagnostics', 'This Month', 'Avg Index', 'Success Manager', 'Status', 'Actions'].map(h => (
+                  {['Name', 'Plan', 'Total Diagnostics', 'This Month', 'Avg Index', 'Success Manager', 'TA Provider', 'Status', 'Actions'].map(h => (
                     <th key={h} className="px-4 py-2.5 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -214,6 +215,14 @@ export default async function TenantsPage() {
                           admins={platformAdmins.map((a: any) => ({ clerkId: a.clerkId, name: a.name, email: a.email }))}
                           currentManager={tenant.successManagerName ? { name: tenant.successManagerName, email: tenant.successManagerEmail } : null}
                         />
+                      </td>
+                      <td className="px-4 py-3.5">
+                        {tenant.plan !== 'owner' && (
+                          <TaProviderControl
+                            tenantId={tid}
+                            current={tenant.taProvider ?? 'self'}
+                          />
+                        )}
                       </td>
                       <td className="px-4 py-3.5">
                         <span className="flex items-center gap-1.5 font-medium"

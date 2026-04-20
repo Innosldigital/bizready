@@ -172,6 +172,75 @@ export async function sendBankNotificationEmail(params: {
   })
 }
 
+// ── STAFF INVITE EMAIL ────────────────────────────────────
+export async function sendStaffInviteEmail(params: {
+  name:      string
+  email:     string
+  role:      string
+  signUpUrl: string
+}) {
+  const { name, email, role, signUpUrl } = params
+  const roleLabel: Record<string, string> = {
+    innosl_admin:    'Admin',
+    focal_person:    'Focal Person',
+    project_manager: 'Project Manager',
+    external_viewer: 'External Viewer',
+  }
+  const label = roleLabel[role] ?? role
+
+  return getResend().emails.send({
+    from:     FROM,
+    to:       email,
+    reply_to: REPLY_TO,
+    subject:  `You have been invited to BizReady — Innovation SL`,
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>BizReady Staff Invitation</title></head>
+<body style="margin:0;padding:0;background:#f4f5f7;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:32px 0">
+<tr><td align="center">
+<table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%">
+
+  <tr><td style="background:#3B1270;border-radius:12px 12px 0 0;padding:28px 32px;text-align:center">
+    <p style="margin:0 0 4px;font-size:11px;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:1px">BizReady · Innovation SL</p>
+    <h1 style="margin:0;font-size:20px;font-weight:600;color:#fff">You&apos;re invited to join the team</h1>
+  </td></tr>
+
+  <tr><td style="background:#fff;padding:32px">
+    <p style="font-size:15px;color:#333;margin:0 0 12px">Hi ${name},</p>
+    <p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px">
+      You have been added to the <strong>Innovation SL BizReady platform</strong> as a
+      <strong style="color:#3B1270">${label}</strong>.
+    </p>
+    <p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 28px">
+      Click the button below to create your account. Use this email address
+      (<strong>${email}</strong>) when signing up — your role will be assigned automatically.
+    </p>
+    <div style="text-align:center;margin:0 0 28px">
+      <a href="${signUpUrl}"
+        style="display:inline-block;background:#3B1270;color:#fff;padding:14px 36px;border-radius:8px;text-decoration:none;font-size:15px;font-weight:600">
+        Create my account →
+      </a>
+    </div>
+    <p style="font-size:12px;color:#aaa;margin:0">
+      If the button doesn&apos;t work, copy this link: ${signUpUrl}<br><br>
+      This invitation was sent by the Innovation SL platform admin. If you believe this is an error, ignore this email.
+    </p>
+  </td></tr>
+
+  <tr><td style="background:#f4f5f7;border-radius:0 0 12px 12px;padding:16px 32px;text-align:center">
+    <p style="font-size:11px;color:#aaa;margin:0">BizReady · Innovation SL · Sierra Leone</p>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body></html>`,
+  })
+}
+
 // ── WELCOME EMAIL (new SME registration) ─────────────────
 export async function sendWelcomeEmail(params: {
   business: any // Use any to avoid Mongoose document conflicts in API routes
