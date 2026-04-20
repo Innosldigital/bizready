@@ -49,6 +49,7 @@ export default function SettingsClient({ tenant }: SettingsClientProps) {
     if (tab === 'API Keys' && !apiKeysLoaded) loadApiKeys()
   }
   const [copied, setCopied] = useState(false)
+  const [copiedSubdomain, setCopiedSubdomain] = useState(false)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [profileError, setProfileError] = useState('')
   const [profileSuccess, setProfileSuccess] = useState('')
@@ -418,41 +419,92 @@ export default function SettingsClient({ tenant }: SettingsClientProps) {
               </div>
             </div>
 
-            {/* Custom domain — Growth+ */}
-            <div className="pt-4 border-t border-gray-100">
-              <p className="text-xs font-medium text-gray-700 mb-3">Custom Domain</p>
-              {isGrowthPlus ? (
-                <>
-                  <p className="text-xs text-gray-400 mb-3">
-                    Point your own domain (e.g. <span className="font-mono">diagnostic.mybank.com</span>) to BizReady. Once saved, create a <span className="font-mono">CNAME</span> record pointing to <span className="font-mono">bizready.io</span>.
-                  </p>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="diagnostic.mybank.com"
-                      value={customDomain}
-                      onChange={e => setCustomDomain(e.target.value.trim())}
-                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2"
-                      style={{ '--tw-ring-color': 'var(--primary, #5B1FA8)' } as React.CSSProperties}
-                    />
-                    <button
-                      onClick={handleDomainSave}
-                      disabled={domainSaving}
-                      className="px-4 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-                      style={{ background: 'var(--primary, #5B1FA8)' }}
-                    >
-                      {domainSaving ? 'Saving…' : 'Save'}
-                    </button>
-                  </div>
-                  {domainError   && <p className="text-xs text-red-600 mt-2">{domainError}</p>}
-                  {domainSuccess && <p className="text-xs text-emerald-700 mt-2">{domainSuccess}</p>}
-                </>
-              ) : (
-                <div className="rounded-lg bg-gray-50 border border-gray-200 px-4 py-3 text-xs text-gray-500">
-                  Custom domains are available on the <span className="font-semibold text-gray-700">Growth plan</span> and above.{' '}
-                  <button className="underline hover:text-gray-700" onClick={() => handleTabChange('Billing')}>Upgrade →</button>
+            {/* Portal URL section */}
+            <div className="pt-4 border-t border-gray-100 space-y-5">
+              <p className="text-xs font-medium text-gray-700">Portal & Diagnostic URLs</p>
+
+              {/* Auto-generated subdomain — always available, no DNS needed */}
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">Ready to use</span>
                 </div>
-              )}
+                <p className="text-xs font-semibold text-gray-800 mb-0.5">Your BizReady Subdomain</p>
+                <p className="text-[11px] text-gray-500 mb-3">
+                  This URL works immediately — no setup required. Copy and share it with your colleagues or SME clients.
+                </p>
+                <div className="flex gap-2">
+                  <div className="flex-1 px-3 py-2 bg-white border border-emerald-200 rounded-lg font-mono text-sm text-gray-700 truncate select-all">
+                    {`https://${tenant.slug}.bizready.io`}
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`https://${tenant.slug}.bizready.io`)
+                      setCopiedSubdomain(true)
+                      setTimeout(() => setCopiedSubdomain(false), 2000)
+                    }}
+                    className="px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+                    style={copiedSubdomain
+                      ? { background: '#E1F5EE', color: '#0F6E56', border: '1px solid #0F6E56' }
+                      : { background: 'var(--primary, #5B1FA8)', color: '#fff', border: '1px solid transparent' }
+                    }
+                  >
+                    {copiedSubdomain ? '✓ Copied!' : 'Copy'}
+                  </button>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-2">
+                  Diagnostic link: <span className="font-mono">{`https://${tenant.slug}.bizready.io/diagnostic/${tenant.slug}`}</span>
+                </p>
+              </div>
+
+              {/* Custom domain — Growth+ optional advanced feature */}
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-xs font-medium text-gray-700">Custom Domain</p>
+                  <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Optional · Growth+ only</span>
+                </div>
+                {isGrowthPlus ? (
+                  <>
+                    <p className="text-[11px] text-gray-400 mb-3">
+                      Already have your own domain? Enter it below, then ask your IT team to add a <span className="font-mono font-medium">CNAME</span> record pointing <span className="font-mono font-medium">{customDomain || 'yourdomain.com'}</span> → <span className="font-mono font-medium">bizready.io</span>.
+                      Your BizReady subdomain above works without this step.
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="e.g. diagnostic.mybank.com"
+                        value={customDomain}
+                        onChange={e => setCustomDomain(e.target.value.trim())}
+                        className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2"
+                        style={{ '--tw-ring-color': 'var(--primary, #5B1FA8)' } as React.CSSProperties}
+                      />
+                      <button
+                        onClick={handleDomainSave}
+                        disabled={domainSaving}
+                        className="px-4 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+                        style={{ background: 'var(--primary, #5B1FA8)' }}
+                      >
+                        {domainSaving ? 'Saving…' : 'Save'}
+                      </button>
+                    </div>
+                    {domainError   && <p className="text-xs text-red-600 mt-2">{domainError}</p>}
+                    {domainSuccess && <p className="text-xs text-emerald-700 mt-2">{domainSuccess}</p>}
+                    {customDomain && !domainError && !domainSuccess && (
+                      <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-[11px] text-amber-800">
+                        <p className="font-semibold mb-0.5">DNS setup required for <span className="font-mono">{customDomain}</span></p>
+                        <p>Ask your IT team or domain registrar to add:</p>
+                        <code className="block mt-1 bg-white border border-amber-200 rounded px-2 py-1 font-mono text-[10px]">
+                          CNAME &nbsp; {customDomain} &nbsp; → &nbsp; bizready.io
+                        </code>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="rounded-lg bg-gray-50 border border-gray-200 px-4 py-3 text-xs text-gray-500">
+                    Custom domains are available on the <span className="font-semibold text-gray-700">Growth plan</span> and above.{' '}
+                    <button className="underline hover:text-gray-700" onClick={() => handleTabChange('Billing')}>Upgrade →</button>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="pt-4 border-t border-gray-100">
