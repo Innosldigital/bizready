@@ -140,13 +140,13 @@ const PLANS = [
   {
     name: 'Starter', popular: false,
     desc: 'For community banks and microfinance institutions getting started.',
-    cta: 'Start free trial', ctaSignup: true,
+    cta: 'Get started', ctaSignup: true,
     features: ['50 diagnostics per month', 'Automated email results', 'Basic bank dashboard', 'Standard scoring engine', 'Email support'],
   },
   {
     name: 'Growth', popular: true,
     desc: 'For national banks running active SME lending programmes.',
-    cta: 'Start free trial', ctaSignup: true,
+    cta: 'Get started', ctaSignup: true,
     features: ['Unlimited diagnostics', 'White-label branding & custom domain', 'Full analytics dashboard', 'TA programme tracker', 'PDF bank reports', 'CSV/Excel question bank import', 'Priority support'],
   },
   {
@@ -356,13 +356,13 @@ export default function LandingPage() {
             <h1 className="hero-h1" style={{ fontSize: 52, fontWeight: 800, color: '#fff', lineHeight: 1.1, margin: '0 0 20px', letterSpacing: -1.2 }}>
               The Investment{'\n'}
               <span style={{ color: '#7DD3FC' }}>Readiness Platform</span>{'\n'}
-              for African Banks
+              for Financial Service Providers
             </h1>
             <p className="hero-body" style={{ fontSize: 17, color: 'rgba(255,255,255,0.72)', lineHeight: 1.68, maxWidth: 480, margin: '0 0 32px' }}>
               Identify SME capacity gaps, build technical assistance plans, and unlock institutional lending across West Africa.
             </p>
             <div className="hero-ctas">
-              <CTAButton label="Start free trial" style={{ padding: '14px 28px', borderRadius: 11, background: '#fff', color: P, fontWeight: 700, fontSize: 15, letterSpacing: -0.2 }} />
+              <CTAButton label="Get started" style={{ padding: '14px 28px', borderRadius: 11, background: '#fff', color: P, fontWeight: 700, fontSize: 15, letterSpacing: -0.2 }} />
               <a href="#how-it-works" style={{ padding: '14px 28px', borderRadius: 11, background: 'rgba(255,255,255,0.10)', color: '#fff', fontWeight: 600, fontSize: 15, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.25)', letterSpacing: -0.2 }}>
                 How it works
               </a>
@@ -429,7 +429,9 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── BANK PARTNERS TICKER ── */}
+      {/*
+      ── BANK PARTNERS TICKER ──
+      Hidden for now per stakeholder feedback. Kept in code for future reuse.
       <section id="partners" className="sec-pad" style={{ background: '#fff' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', textAlign: 'center', marginBottom: 48 }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: BD, letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 12 }}>Bank Partners</p>
@@ -452,6 +454,7 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+      */}
 
       {/* ── PRICING (no prices) ── */}
       <section id="pricing" className="sec-pad" style={{ background: '#FAFAF8' }}>
@@ -459,12 +462,11 @@ export default function LandingPage() {
           <div style={{ textAlign: 'center', marginBottom: 52 }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: BD, letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 12 }}>Plans</p>
             <h2 style={{ fontSize: 38, fontWeight: 800, color: PD, margin: '0 0 14px', letterSpacing: -0.8 }}>Built for every stage of growth</h2>
-            <p style={{ fontSize: 15, color: '#666' }}>Start free for 14 days. No credit card required.</p>
+            <p style={{ fontSize: 15, color: '#666' }}>Flexible deployment options for institutions of different sizes.</p>
           </div>
           <div className="pricing-grid">
             {PLANS.map(plan => (
               <div key={plan.name} style={{ borderRadius: 20, overflow: 'hidden', border: plan.popular ? `2px solid ${P}` : '0.5px solid #EDE9FE', background: plan.popular ? P : '#fff', position: 'relative', boxShadow: plan.popular ? `0 16px 48px rgba(91,31,168,0.28)` : '0 2px 12px rgba(0,0,0,0.04)' }}>
-                {plan.popular && <div style={{ position: 'absolute', top: 18, right: 18, background: '#7DD3FC', color: '#0C4A6E', fontSize: 10, fontWeight: 700, padding: '4px 12px', borderRadius: 20 }}>Most popular</div>}
                 <div style={{ padding: '28px 26px 20px' }}>
                   <p style={{ fontSize: 13, fontWeight: 600, color: plan.popular ? 'rgba(255,255,255,0.55)' : '#999', marginBottom: 8 }}>{plan.name}</p>
                   <p style={{ fontSize: 13, color: plan.popular ? 'rgba(255,255,255,0.6)' : '#777', lineHeight: 1.55, marginBottom: 20 }}>{plan.desc}</p>
@@ -566,9 +568,9 @@ export default function LandingPage() {
       <section className="sec-pad" style={{ background: `linear-gradient(135deg, ${PD} 0%, ${P} 60%, ${BD} 100%)` }}>
         <div style={{ maxWidth: 660, margin: '0 auto', textAlign: 'center' }}>
           <h2 className="cta-h2" style={{ fontSize: 38, fontWeight: 800, color: '#fff', margin: '0 0 16px', letterSpacing: -0.8, lineHeight: 1.12 }}>Ready to transform SME lending?</h2>
-          <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.72)', marginBottom: 34, lineHeight: 1.6 }}>Join 12 bank partners across West Africa already using BizReady to identify investment-ready SMEs faster.</p>
+          <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.72)', marginBottom: 34, lineHeight: 1.6 }}>See how BizReady can help your institution identify investment-ready SMEs faster.</p>
           <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <CTAButton label="Start free trial →" style={{ padding: '14px 30px', borderRadius: 12, background: '#fff', color: P, fontWeight: 700, fontSize: 15 }} />
+            <CTAButton label="Get started →" style={{ padding: '14px 30px', borderRadius: 12, background: '#fff', color: P, fontWeight: 700, fontSize: 15 }} />
             <Link href="/contact" style={{ padding: '14px 30px', borderRadius: 12, background: 'rgba(255,255,255,0.10)', color: '#fff', fontWeight: 600, fontSize: 15, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.25)' }}>Contact us →</Link>
           </div>
         </div>
@@ -583,7 +585,7 @@ export default function LandingPage() {
                 <div style={{ width: 30, height: 30, borderRadius: 8, background: P, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: '#fff', fontWeight: 800, fontSize: 14 }}>B</span></div>
                 <span style={{ fontSize: 16, fontWeight: 700, color: '#fff', letterSpacing: -0.3 }}>BizReady</span>
               </div>
-              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.42)', lineHeight: 1.7, maxWidth: 240, margin: '0 0 12px' }}>The SME Investment Readiness Platform for African banks. Powered by Innovation SL.</p>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.42)', lineHeight: 1.7, maxWidth: 240, margin: '0 0 12px' }}>The SME Investment Readiness Platform for financial service providers. Powered by Innovation SL.</p>
               <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>© {new Date().getFullYear()} Innovation SL. All rights reserved.</p>
             </div>
             <div>
